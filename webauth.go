@@ -41,8 +41,8 @@ func no(w http.ResponseWriter) {
 	w.Write([]byte("no."))
 }
 
-func setToken(w http.ResponseWriter, token string) error {
-	encoded, err := s.Encode("auth-token", token) 
+func setToken(w http.ResponseWriter, token *Token) error {
+	encoded, err := s.Encode("auth-token", *token) 
 	if err == nil {
 		cookie := &http.Cookie{
 			Name:	"auth-token",
@@ -55,12 +55,12 @@ func setToken(w http.ResponseWriter, token string) error {
 	return err
 }
 
-func getToken(r *http.Request) (token string, err error) {
+func getToken(r *http.Request) (token *Token, err error) {
 	cookie, err := r.Cookie("auth-token")
-	if err != nil { return "", err }
+	if err != nil { return nil, err }
 
-	err = s .Decode("auth-token", cookie.Value, &token)
-	if err != nil { return "", err }
+	err = s .Decode("auth-token", cookie.Value, token)
+	if err != nil { return nil, err }
 
 	return token, nil
 }
@@ -137,11 +137,14 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 */
 	name, token := r.FormValue("name"), r.FormValue("token")
 
-	tok, err := A.Login(name, token)
-
+	tok, err := A.Login(name, &Token{ this, token })
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if tok == nil {
+		w.Write([]byte(`<p>Check your email account, and <a href="/login">login</a>!</p>`))
 		return
 	}
 
@@ -151,6 +154,7 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 
 	http.Redirect(w, r, "/settings", http.StatusFound)
 }
@@ -243,8 +247,6 @@ func main() {
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir("./static/"))))
 
-
 	log.Println("Launching on http://localhost:"+*port)
-//	authserver = "http://localhost:"+*port
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
