@@ -3,7 +3,7 @@
 <h1> Awesom Auth Server </h1>
 <p>
 	The <abbr title="Awesom Auth Server">AAS</abbr> allows
-	multiple services to share the same user base. Here's a
+	multiple services to share the same user base. Here's a quick
 	summary:
 	<ul>
 		<li> User need to have a valid email account </li>
@@ -37,5 +37,29 @@
 </p>
 
 <h1> Login </h1>
+<img src="/static/imgs/login.png" alt="login" />
+<p>
+	<ol>
+		<li> A registered user ask the service to be connected </li>
+		<li> The service ask the AAS to generate a token for the given user </li>
+		<li> The AAS sends the user a token via email for this service </li>
+		<li> The user provide this token to the service </li>
+		<li>
+			The service check the token validity and keep user identity
+			somewhere (eg. cookies). The service may change the token
+			at each request, periodically, etc.
+		</li>
+	</ol>
+</p>
+
+<h1> Settings </h1>
+<img src="/static/imgs/settings.png" alt="settings" />
+<p>
+	The settings allows to user to:
+	<ul>
+		<li> Change its personnal informations </li>
+		<li> View all the current tokens. At least the token for the AAS should be displayed. </li>
+	</ul>
+</p>
 
 </div>

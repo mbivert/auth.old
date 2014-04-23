@@ -16,6 +16,8 @@ var rtmpl = template.Must(
 	template.New("register.html").ParseFiles("templates/register.html"))
 var ltmpl = template.Must(
 	template.New("login.html").ParseFiles("templates/login.html"))
+var stmpl = template.Must(
+	template.New("settings.html").ParseFiles("templates/settings.html"))
 
 var A *Auth
 
@@ -55,14 +57,23 @@ func setToken(w http.ResponseWriter, token *Token) error {
 	return err
 }
 
-func getToken(r *http.Request) (token *Token, err error) {
+func unsetToken(w http.ResponseWriter) {
+	cookie := &http.Cookie{
+		Name:	"auth-token",
+		Value:	"",
+		Path:	"/",
+		MaxAge:	-1,
+	}
+	http.SetCookie(w, cookie)
+}
+
+func getToken(r *http.Request) (token Token, err error) {
 	cookie, err := r.Cookie("auth-token")
-	if err != nil { return nil, err }
+	if err == nil {
+		err = s .Decode("auth-token", cookie.Value, &token)
+	}
 
-	err = s .Decode("auth-token", cookie.Value, token)
-	if err != nil { return nil, err }
-
-	return token, nil
+	return
 }
 
 // Registration
@@ -182,20 +193,58 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	A.Logout(token)
+	A.Logout(&token)
+	unsetToken(w)
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // Settings
 
 func getSettings(w http.ResponseWriter, r *http.Request) {
-	writeFiles(w, "templates/header.html", "templates/navbar2.html",
-		"templates/settings.html", "templates/footer.html")
+	var tokens []Token
+	token, err := getToken(r)
+	if err == nil {
+		tokens, err = A.GetTokens(&token)
+	}
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeFiles(w, "templates/header.html", "templates/navbar2.html")
+	d := struct { Tokens []Token }{ tokens }
+	if err := stmpl.Execute(w, &d); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeFiles(w, "templates/footer.html")
 }
 
 func postSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func settings(w http.ResponseWriter, r *http.Request) {
+	token, err := getToken(r)
+	if err == nil {
+		err = A.QuickCheck(&token)
+	}
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ntoken := NewToken(token.Service)
+	err = setToken(w, ntoken)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	switch r.Method {
 	case "GET":
 		getSettings(w, r)
@@ -204,6 +253,8 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	default:
 		no(w)
 	}
+
+	A.SetToken(token.Tok, ntoken.Tok)
 }
 
 // API

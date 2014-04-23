@@ -63,10 +63,9 @@ func (a *Auth) Register(name, email string) error {
 	id, err := a.db.Register(name, email, "citizen")
 	if err != nil { return err }
 
-	tok := NewToken(this)
-	a.StoreToken(id, tok)
-
-	err = a.SendToken(email, tok)
+	token := NewToken(this)
+	a.StoreToken(id, token)
+	err = a.SendToken(email, token)
 
 	return err
 }
@@ -74,31 +73,45 @@ func (a *Auth) Register(name, email string) error {
 func (a *Auth) Unregister(name string) {
 }
 
-func (a *Auth) Login(name string, token *Token) (ntok *Token, err error) {
+func (a *Auth) Login(name string, token *Token) (ntoken *Token, err error) {
 	// user want a new token
 	if token.Tok == "" {
 		email, err := a.db.GetEmail(name)
-		if err == nil { a.SendToken(email, NewToken(this)) }
-		return nil, err
-	}
+		if err != nil { return nil, err }
+		id, _ := a.db.GetId(name)
 
-	// *2 because it has been hex.encoded()
-	if len(token.Tok) != lenToken*2 || a.tokens[token.Tok] == 0 {
-		err = errors.New("Wrong token.")
+		t := NewToken(this)
+		a.StoreToken(id, t)
+		err = a.SendToken(email, t)
+
 		return nil, err
 	}
 
 //	if a.toact[tok] { a.db.Activate(id); a.toact[tok] = false }
 
-	id, err := a.CheckToken(name, token)
+	_, err = a.CheckToken(name, token)
 	if err != nil { return nil, err }
 
-	ntok = a.UpdateToken(id, token)
+	ntoken = NewToken(token.Service)
+	a.SetToken(token.Tok, ntoken.Tok)
 
 	return
 }
 
 func (a *Auth) Logout(token *Token) {
+	id := a.tokens[token.Tok]
+	if id == 0 { return }
+
+	delete(a.tokens, token.Tok)
+
+	n := len(a.connected[id])
+	for i := range a.connected[id] {
+		if a.connected[id][i].Tok == token.Tok {
+			a.connected[id][i] = a.connected[id][n-1]
+			a.connected[id][n-1] = Token{ "", "" }
+			a.connected[id] = a.connected[id][:n-1]
+		}
+	}
 }
 
 func (a *Auth) Update(id int32, name, email string) {
@@ -110,25 +123,34 @@ func (a *Auth) StoreToken(id int32, token *Token) {
 }
 
 func (a *Auth) CheckToken(name string, token *Token) (id int32, err error) {
+	if len(token.Tok) != lenToken*2 {
+		id, err = 0, errors.New("CheckToken: Wrong token length.")
+		return
+	}
+
 	id = a.tokens[token.Tok]
 	id2, _ := a.db.GetId(name)
-	if id != id2 || id == 0 { err = errors.New("Wrong token.") }
+	if id != id2 || id == 0 { err = errors.New("CheckToken: Wrong token.") }
 	return
 }
 
-func (a *Auth) UpdateToken(id int32, token *Token) *Token {
-	ntoken := NewToken(token.Service)
+func (a *Auth) QuickCheck(token *Token) (err error) {
+	if a.tokens[token.Tok] == 0 {
+		err = errors.New("QuickCheck: Invalid Token")
+	}
+	return
+}
 
-	delete(a.tokens, token.Tok)
-	a.tokens[ntoken.Tok] = id
+func (a *Auth) SetToken(old, new string) {
+	id := a.tokens[old]
+	delete(a.tokens, old)
+	a.tokens[new] = id
 
 	for i := range a.connected[id] {
-		if a.connected[id][i].Tok == token.Tok {
-			a.connected[id][i] = *ntoken
+		if a.connected[id][i].Tok == old {
+			a.connected[id][i].Tok = new
 		}
 	}
-
-	return ntoken
 }
 
 func (a *Auth) SendToken(email string, token *Token) error {
@@ -150,4 +172,11 @@ func (a *Auth) SendEmail(to, subject, msg string) error {
 		[]string{to},[]byte(body))
 
 	return err
+}
+
+func (a *Auth) GetTokens(token *Token) ([]Token, error) {
+	id := a.tokens[token.Tok]
+	if id == 0 { return nil, errors.New("GetTokens: Wrong token.") }
+
+	return a.connected[id], nil
 }
