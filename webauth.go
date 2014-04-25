@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"github.com/dchest/captcha"
 	"github.com/gorilla/securecookie"
@@ -224,6 +225,7 @@ func getSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func postSettings(w http.ResponseWriter, r *http.Request) {
+	// TODO
 }
 
 func settings(w http.ResponseWriter, r *http.Request) {
@@ -258,18 +260,78 @@ func settings(w http.ResponseWriter, r *http.Request) {
 }
 
 // API
-func getinfo(w http.ResponseWriter, r *http.Request) {
+func info(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" { no(w); return }
+	var u *User
+
+	if r.FormValue("login") != "" {
+		u = A.GetInfoLogin(r.FormValue("login"))
+	} else if r.FormValue("token") != "" {
+		u = A.GetInfoToken(r.FormValue("token"))
+	}
+
+	log.Println(r.URL.Path)
+	log.Println(r.FormValue("login"), r.FormValue("token"))
+	log.Println(u)
+
+	if u == nil { no(w); return }
+
+	res, err := json.Marshal(u)
+	if err != nil {
+		log.Println(err)
+		no(w); return
+	}
+
+	w.Write(res)
+}
+
+func generate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" { no(w); return }
+
+	login := r.FormValue("login")
+	if login == "" { no(w); return }
+
+	A.ServiceToken(login, r.RemoteAddr)
+
+	w.Write([]byte("ok."))
+}
+
+func check(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" { no(w); return }
+
+	if r.FormValue("token") == "" { no(w); return }
+
+	token := Token{ r.RemoteAddr, r.FormValue("token") }
+
+	err := A.QuickCheck(&token)
+	if err == nil {
+		w.Write([]byte("ok."))
+	} else {
+		log.Println(err)
+		no(w)
+	}
 }
 
 func chain(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" { no(w); return }
+
+	if r.FormValue("token") == "" { no(w); return }
+
+	token := Token{ r.RemoteAddr, r.FormValue("token") }
+
+	ntoken, err := A.ChainToken(&token)
+	if err != nil { log.Println(err); no(w); return }
+	w.Write([]byte(ntoken.Tok))
 }
 
 // Index
 
 func index(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		no(w)
+		no(w); return
 	}
+
+	// XXX if connected, navbar2.html
 
 	writeFiles(w, "templates/header.html", "templates/navbar.html",
 		"templates/index.html", "templates/footer.html")
@@ -286,8 +348,12 @@ func main() {
 
 	http.HandleFunc("/logout/", logout)
 
-	http.HandleFunc("/api/getinfo", getinfo)
+	// API
+	http.HandleFunc("/api/info", info)
+	http.HandleFunc("/api/generate", generate)
+	http.HandleFunc("/api/check", check)
 	http.HandleFunc("/api/chain", chain)
+
 
 	http.HandleFunc("/settings/", settings)
 

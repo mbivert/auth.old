@@ -62,4 +62,38 @@
 	</ul>
 </p>
 
+<h1> API </h1>
+<p>
+	Services use the AAS through the following HTTP API. Services must
+	have been previously registered to the AAS by an administrator.
+	<ul>
+		<li>
+			<b>GET /api/info?login=...</b>, retrieves JSON info about user. <br /
+			Returns a JSON document describing the user or  "no." if the user
+			doesn't exist.
+		</li>
+		<li>
+			<b>GET /api/info?token=...</b>, retrieves JSON info about user owning
+			the token.<br />
+			Returns a JSON document describing the user or  "no." if the user
+			doesn't exist.
+		</li>
+		<li>
+			<b>GET /api/generate?login=...</b>, sends user a new token
+			for the service who ask. Service is identified by its IP address. <br />
+			Returns "yes." if a token was emailed  "no." otherwise.
+		</li>
+		<li>
+			<b>GET /api/check?token=...</b>, check if the token is valid for
+			the service.  <br />
+			Returns "yes." if the token is valid  "no." otherwise.
+		</li>
+		<li>
+			<b>GET /api/chain?token=...</b>, update the
+			given token if its valid. <br />
+			Returns the new token if any if the token is valid  "no." otherwise.
+		</li>
+	</ul>
+</p>
+
 </div>

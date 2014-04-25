@@ -115,6 +115,7 @@ func (a *Auth) Logout(token *Token) {
 }
 
 func (a *Auth) Update(id int32, name, email string) {
+	// TODO
 }
 
 func (a *Auth) StoreToken(id int32, token *Token) {
@@ -179,4 +180,47 @@ func (a *Auth) GetTokens(token *Token) ([]Token, error) {
 	if id == 0 { return nil, errors.New("GetTokens: Wrong token.") }
 
 	return a.connected[id], nil
+}
+
+func (a *Auth) GetInfoLogin(login string) *User {
+	id, err := a.db.GetId(login)
+	if err == nil {
+		return a.db.GetUser(id)
+	}
+
+	return nil
+}
+
+func (a *Auth) GetInfoToken(tok string) *User {
+	if a.tokens[tok] > 0 {
+		return a.db.GetUser(a.tokens[tok])
+	}
+
+	return nil
+}
+
+// send login a token to be used at service
+func (a *Auth) ServiceToken(login, service string) error {
+	email, err := a.db.GetEmail(login)
+	if err != nil { return err }
+
+	id, _ := a.db.GetId(login)
+
+	token := NewToken(service)
+
+	a.StoreToken(id, token)
+	a.SendToken(email, token)
+
+	return nil
+}
+
+// Update token
+func (a *Auth) ChainToken(token *Token) (*Token, error) {
+	err := a.QuickCheck(token)
+	if err != nil { return nil, err }
+
+	ntoken := NewToken(token.Service)
+	a.SetToken(token.Tok, ntoken.Tok)
+
+	return ntoken, nil
 }

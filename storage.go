@@ -62,6 +62,17 @@ type User struct {
 	Type		string
 }
 
+func (db *Database)GetUser(id int32) *User {
+	var u User
+
+	db.QueryRow(`
+		SELECT id, name, email
+		FROM users
+		WHERE id = $1`, id).Scan(&u.Id, &u.Name, &u.Email)
+
+	return &u
+}
+
 func (db *Database) GetEmail(login string) (email string, err error) {
 	err = db.QueryRow(`
 		SELECT email FROM
