@@ -219,6 +219,17 @@ func discover(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(key))
 }
 
+func update(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" { ko(w); return }
+
+	key := r.FormValue("key")
+
+	key, err := AddService(name, url)
+	if err != nil { ko(w); return }
+
+	w.Write([]byte(key))
+}
+
 func info(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
@@ -289,6 +300,7 @@ func main() {
 
 	// API
 	http.HandleFunc("/api/discover", discover)
+	http.HandleFunc("/api/update", update)
 	http.HandleFunc("/api/info", info)
 	http.HandleFunc("/api/generate", generate)
 	http.HandleFunc("/api/check", check)

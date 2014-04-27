@@ -63,20 +63,25 @@
 </p>
 
 <h1> API </h1>
+<h2> Fonctions </h2>
 <p>
 	Services use the AAS through the following HTTP API. Services must
 	have been previously registered to the AAS by an administrator. <br />
 	All parameters are non-empty string.
 	<ul>
 		<li>
-			<b>POST /api/discover name=... url=...</b>, Register the service to the AAS <br />
+			<b>POST /api/discover name=... url=...</b>, register the service to the AAS <br />
 			Return a key identifying the service/ko. <br />
-			All the following requests <b>must</b> have a "key=..."  value. <br />
+			All the following requests but <i>info<i> <b>must</b> have a "key=..."  value. <br />
 			Manually contact the admnistrator if you lose the key.
 		</li>
 		<li>
+			<b>POST /api/update </b> , update the key for the service. <br />
+			Return the new key/ko.
+		</li>
+		<li>
 			<b>GET /api/info?token=...</b>, retrieve info about the token owner <br />
-			Returns « name <email> »/ko
+			Returns « name\n email »/ko
 		</li>
 		<li>
 			<b>POST /api/generate?login=...</b>, Generate a token for the user <br />
@@ -92,6 +97,15 @@
 			Returns the new token/ko.
 		</li>
 	</ul>
+</p>
+<h2> Examples </h2>
+<p>
+	To register a new service:
+	<pre><code>(earth)$ curl --data 'name=thipi&url=http://thipi.awesom.eu/' http://localhost:8080/api/discover
+K4U3cbACnEMYFfzLaTgwAspuR7NQ6S9Hdhg4LhBxTvKMRsqdtHTkSQxeKtZRGnR1
+</code></pre>
+	Service is now registered with given name and URL. The returned key shall now
+	be used to identify the service.
 </p>
 
 </div>
