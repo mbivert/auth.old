@@ -1,166 +1,15 @@
 package main
 
-// XXX clean this up. make cache for email<->id
-
 import (
 	"errors"
-	"github.com/gorilla/securecookie"
-	"encoding/hex"
-	"net/smtp"
 	"strings"
+	"net/smtp"
 )
 
-const (
-	lenToken	=	32
-)
-
-var this = "http://localhost:8080"
-
-type Token struct {
-	Service		string
-	Tok			string
-}
-
-type Auth struct {
-	db			*Database
-
-	connected	map[int32][]Token
-	tokens		map[string]int32
-
-//	toact		map[string]bool
-}
-
-func NewToken(service string) *Token {
-	// maybe use something in nearly whole ascii
-	// rather than a-f0-9.
-	tok := hex.EncodeToString(
-		securecookie.GenerateRandomKey(lenToken))
-
-	return &Token{ service, tok }
-}
-
-func NewAuth() *Auth {
-	return &Auth{
-		NewDB(),
-		map[int32][]Token{},
-		map[string]int32{},
-//		make(map[string]bool),
-	}
-}
-
-func (a *Auth) Register(name, email string) error {
-	if name == "" || email == "" {
-		err := errors.New("Empty field(s)")
-		return err
-	}
-
-	// don't even bother.
-	if !strings.Contains(email, "@") {
-		err := errors.New("Bad email address")
-		return err
-	}
-
-	id, err := a.db.Register(name, email, "citizen")
-	if err != nil { return err }
-
-	token := NewToken(this)
-	a.StoreToken(id, token)
-	err = a.SendToken(email, token)
-
-	return err
-}
-
-func (a *Auth) Unregister(name string) {
-}
-
-func (a *Auth) Login(name string, token *Token) (ntoken *Token, err error) {
-	// user want a new token
-	if token.Tok == "" {
-		email, err := a.db.GetEmail(name)
-		if err != nil { return nil, err }
-		id, _ := a.db.GetId(name)
-
-		t := NewToken(this)
-		a.StoreToken(id, t)
-		err = a.SendToken(email, t)
-
-		return nil, err
-	}
-
-//	if a.toact[tok] { a.db.Activate(id); a.toact[tok] = false }
-
-	_, err = a.CheckToken(name, token)
-	if err != nil { return nil, err }
-
-	ntoken = NewToken(token.Service)
-	a.SetToken(token.Tok, ntoken.Tok)
-
-	return
-}
-
-func (a *Auth) Logout(token *Token) {
-	id := a.tokens[token.Tok]
-	if id == 0 { return }
-
-	delete(a.tokens, token.Tok)
-
-	n := len(a.connected[id])
-	for i := range a.connected[id] {
-		if a.connected[id][i].Tok == token.Tok {
-			a.connected[id][i] = a.connected[id][n-1]
-			a.connected[id][n-1] = Token{ "", "" }
-			a.connected[id] = a.connected[id][:n-1]
-		}
-	}
-}
-
-func (a *Auth) Update(id int32, name, email string) {
-	// TODO
-}
-
-func (a *Auth) StoreToken(id int32, token *Token) {
-	a.connected[id] = append(a.connected[id], *token)
-	a.tokens[token.Tok] = id
-}
-
-func (a *Auth) CheckToken(name string, token *Token) (id int32, err error) {
-	if len(token.Tok) != lenToken*2 {
-		id, err = 0, errors.New("CheckToken: Wrong token length.")
-		return
-	}
-
-	id = a.tokens[token.Tok]
-	id2, _ := a.db.GetId(name)
-	if id != id2 || id == 0 { err = errors.New("CheckToken: Wrong token.") }
-	return
-}
-
-func (a *Auth) QuickCheck(token *Token) (err error) {
-	if a.tokens[token.Tok] == 0 {
-		err = errors.New("QuickCheck: Invalid Token")
-	}
-	return
-}
-
-func (a *Auth) SetToken(old, new string) {
-	id := a.tokens[old]
-	delete(a.tokens, old)
-	a.tokens[new] = id
-
-	for i := range a.connected[id] {
-		if a.connected[id][i].Tok == old {
-			a.connected[id][i].Tok = new
-		}
-	}
-}
-
-func (a *Auth) SendToken(email string, token *Token) error {
-	err := a.SendEmail(email, "Token", "Hi there,\nHere is your token for "+ token.Service+ ": " + token.Tok)
-	return err
-}
-
-// XXX Change SMTP server to smtp.awesom.eu
-func (a *Auth) SendEmail(to, subject, msg string) error {
+// sendEmail send an email to a user.
+// XXX use several SMTP according to the destination email
+// provider to speed things up.
+func sendEmail(to, subject, msg string) error {
 	from := "auth.newsome@gmail.com"
 	passwd := "awesom auth server"
 
@@ -175,52 +24,118 @@ func (a *Auth) SendEmail(to, subject, msg string) error {
 	return err
 }
 
-func (a *Auth) GetTokens(token *Token) ([]Token, error) {
-	id := a.tokens[token.Tok]
-	if id == 0 { return nil, errors.New("GetTokens: Wrong token.") }
+func sendToken(email string, token *Token) error {
+	s := services[token.Key]
 
-	return a.connected[id], nil
+	err := sendEmail(email, "Token for "+s.Name,
+		"Hi there,\r\n"+
+		"Here is your token for "+s.Name+" ("+s.Url+")"+": "+token.Token)
+	return err
 }
 
-func (a *Auth) GetInfoLogin(login string) *User {
-	id, err := a.db.GetId(login)
-	if err == nil {
-		return a.db.GetUser(id)
+func checkName(name string) error {
+	switch {
+	case name == "":
+		return errors.New("Name is mandatory")
+	case len(name) >= LenToken:
+		return errors.New("Name too long")
+	case strings.Contains(name, "@"):
+		return errors.New("Name is not an email (@ forbidden)")
 	}
 
 	return nil
 }
 
-func (a *Auth) GetInfoToken(tok string) *User {
-	if a.tokens[tok] > 0 {
-		return a.db.GetUser(a.tokens[tok])
+func checkEmail(email string) error {
+	switch {
+	case email == "":
+		return errors.New("Email is mandatory")
+	case len(email) >= LenToken:
+		return errors.New("Email too long")
+	case !strings.Contains(email, "@"):
+		return errors.New("Wrong email address format")
 	}
 
 	return nil
 }
 
-// send login a token to be used at service
-func (a *Auth) ServiceToken(login, service string) error {
-	email, err := a.db.GetEmail(login)
-	if err != nil { return err }
+// isToken check whether the login is a token or a name/email.
+func isToken(login string) bool { return len(login) == LenToken }
 
-	id, _ := a.db.GetId(login)
+// isEmail check whether the login is a name or an email
+func isEmail(login string) bool { return strings.Contains(login, "@") }
 
-	token := NewToken(service)
+// Register add a new user to both database and cache.
+// If the registration succeeds, a(n activation) token is
+// sent to the user.
+func Register(name, email string) error {
+	if err := checkName(name); err != nil {
+		return err
+	}
+	if err := checkEmail(email); err != nil {
+		return err
+	}
 
-	a.StoreToken(id, token)
-	a.SendToken(email, token)
+	u := User{ -1, name, email, false }
 
-	return nil
+	if err := db.AddUser(&u); err != nil {
+		return err
+	}
+
+	token := NewToken(Auth.Key)
+
+	StoreToken(u.Id, token)
+
+	return sendToken(email, token)
 }
 
-// Update token
-func (a *Auth) ChainToken(token *Token) (*Token, error) {
-	err := a.QuickCheck(token)
-	if err != nil { return nil, err }
+func Login(login string) (string, error) {
+	if isToken(login) {
+		ntoken := ChainToken(&Token{ Auth.Key, login })
+		if ntoken == nil {
+			return "", errors.New("Wrong Token")
+		}
+		return ntoken.Token, nil
+	}
 
-	ntoken := NewToken(token.Service)
-	a.SetToken(token.Tok, ntoken.Tok)
+	u := db.GetUser2(login)
+	if u == nil { return "", errors.New("Wrong name/email") }
 
-	return ntoken, nil
+	token := NewToken(Auth.Key)
+	StoreToken(u.Id, token)
+
+	return "", sendToken(u.Email, token)
+}
+
+/*func LoginPassword() {
+}*/
+
+func Logout(token string) {
+	DelToken(&Token{ Auth.Key, token })
+}
+
+/*func Unregister() {
+}*/
+
+func IsAdmin(token string) bool {
+	return db.IsAdmin(tokens[token])
+}
+
+func GetTokens(token string) []*Token {
+	return utokens[tokens[token]]
+}
+
+func AddService(name, url string) (string, error) {
+	if name == "" || url == "" {
+		return "", errors.New("")
+	}
+
+	s := Service{ -1, name, url, RandomString(64) }
+	if err := db.AddService(&s); err != nil {
+		return "", err
+	}
+
+	services[s.Key] = &s
+
+	return s.Key, nil
 }

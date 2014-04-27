@@ -1,14 +1,10 @@
 <div class="container text-center">
 <form action="/login/" method="post">
 	<div class="input-group">
-		<span class="input-group-addon">☺</span>
-		<input name="name" type="text" class="form-control" placeholder="Username or email" />
-	</div>
-	<div class="input-group">
 		<span class="input-group-addon">⚛</span>
-		<input autocomplete="off" name="token" type="password" class="form-control" placeholder="Token" />
+		<input autocomplete="off" name="login" type="text" class="form-control" placeholder="Token, username or email" />
 	</div>
-	<p> If you have no token, let this empty. You will soon receive a new one. </p>
+	<p> If you have no token, enter your email or username. You will soon receive a one. </p>
 	<p><img id="image" src="/captcha/{{.CaptchaId}}.png" alt="Captcha image"></p>
 	<p> (Reload for new captcha) </p>
 	<input type="hidden" name="captchaId" value="{{.CaptchaId}}" /><br>

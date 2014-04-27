@@ -28,10 +28,10 @@
 			<tbody>
 				{{ $t := .Tokens }}
 				{{ range $t }}
+				{{ $s := GetService .Key }}
 				<tr>
-					<td>{{ .Service }}</td>
-					<td>{{ .Tok }}</td>
-
+					<td><a href="{{ $s.Url }}">{{ $s.Name }}</a></td>
+					<td>{{ .Token }}</td>
 				</tr>
 				{{ end }}
 			</tbody>
