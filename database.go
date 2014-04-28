@@ -3,8 +3,8 @@ package main
 import (
 	_ "github.com/lib/pq"
 	"database/sql"
+	"log"
 )
-
 
 var Admin User = User {
 		Id		:		1,			// by convention
@@ -87,10 +87,28 @@ func (db *Database) createAuth() {
 	}
 }
 
+func (db *Database) loadServices() {
+	rows, err := db.Query(`
+		SELECT id, name, url, key
+		FROM services`)
+	if err != nil {
+		LogFatal(err)
+	}
+
+	for rows.Next() {
+		var s Service
+		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key)
+		log.Println(s)
+		services[s.Key] = &s
+	}
+
+}
 func (db *Database) Init() {
 	db.createTables()
 	db.createAdmin()
 	db.createAuth()
+
+	db.loadServices()
 }
 
 // Users

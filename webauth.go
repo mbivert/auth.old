@@ -220,14 +220,7 @@ func discover(w http.ResponseWriter, r *http.Request) {
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" { ko(w); return }
-
-	key := r.FormValue("key")
-
-	key, err := AddService(name, url)
-	if err != nil { ko(w); return }
-
-	w.Write([]byte(key))
+	ko(w)
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
@@ -237,6 +230,27 @@ func info(w http.ResponseWriter, r *http.Request) {
 	if u == nil { ko(w); return }
 
 	w.Write([]byte(u.Name+"\n"+u.Email))
+}
+
+func alogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" { ko(w); return }
+
+	login, key := r.FormValue("login"), r.FormValue("key")
+
+	if isToken(login) {
+		if CheckToken(&Token{ key, login }) {
+			ok(w)
+		} else {
+			ko(w)
+		}
+	} else {
+		u := db.GetUser2(login)
+		s := services[key]
+		if s == nil { ko(w); return }
+		token := NewToken(s.Key)
+		StoreToken(u.Id, token)
+		w.Write([]byte("new"))
+	}
 }
 
 func generate(w http.ResponseWriter, r *http.Request) {
@@ -280,11 +294,12 @@ func chain(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// Data init
-	db = NewDatabase()
 	services = map[string]*Service{}
 	utokens = map[int32][]*Token{}
 	tokens = map[string]int32{}
-	services[Auth.Key] = &Auth
+	// db requires services to be  created
+	db = NewDatabase()
+//	services[Auth.Key] = &Auth
 	rand.Seed(time.Now().UnixNano())
 
 	// XXX load services
@@ -302,8 +317,9 @@ func main() {
 	http.HandleFunc("/api/discover", discover)
 	http.HandleFunc("/api/update", update)
 	http.HandleFunc("/api/info", info)
-	http.HandleFunc("/api/generate", generate)
-	http.HandleFunc("/api/check", check)
+//	http.HandleFunc("/api/generate", generate)
+//	http.HandleFunc("/api/check", check)
+	http.HandleFunc("/api/login", alogin)
 	http.HandleFunc("/api/chain", chain)
 
 	// Captchas

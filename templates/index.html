@@ -70,9 +70,9 @@
 	All parameters are non-empty string.
 	<ul>
 		<li>
-			<b>POST /api/discover name=... url=...</b>, register the service to the AAS <br />
+			<b>POST /api/discover name=... url=... ip=...</b>, register the service to the AAS <br />
 			Return a key identifying the service/ko. <br />
-			All the following requests but <i>info<i> <b>must</b> have a "key=..."  value. <br />
+			All the following requests but <i>info</i> <b>must</b> have a "key=..."  value. <br />
 			Manually contact the admnistrator if you lose the key.
 		</li>
 		<li>
@@ -81,24 +81,23 @@
 		</li>
 		<li>
 			<b>GET /api/info?token=...</b>, retrieve info about the token owner <br />
-			Returns « name\n email »/ko
+			Returns « name\n email »/<i>ko</i>
 		</li>
 		<li>
-			<b>POST /api/generate?login=...</b>, Generate a token for the user <br />
-			Token will be available on the AAS. <br />
-			Returns ok/ko.
-		</li>
-		<li>
-			<b>GET /api/check?token=...</b>, check if the token is valid for the service.  <br />
-			Returns ok/ko.
+			<b>GET /api/login?login=...</b>, Login the user to the AAS for the service
+			who request it. <br />
+			If login is a name/email, a new token will be available on the AAS. <br />
+			Else, if it's a valid token, the user will be effectively login. <br />
+			Returns <i>new</i> if a new token has been generated, <i>ok</i> if the login
+			was a valid token, else <i>ko</i>.
 		</li>
 		<li>
 			<b>GET /api/chain?token=...</b>, update the given token if its valid. <br />
-			Returns the new token/ko.
+			Returns the new token/<i>ko</i>.
 		</li>
 	</ul>
 </p>
-<h2> Examples </h2>
+<h2> Example </h2>
 <p>
 	To register a new service:
 	<pre><code>(earth)$ curl --data 'name=thipi&url=http://thipi.awesom.eu/' http://localhost:8080/api/discover
