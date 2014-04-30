@@ -226,7 +226,9 @@ func update(w http.ResponseWriter, r *http.Request) {
 func info(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
-	u := db.GetUser2(r.FormValue("login"))
+	id := tokens[r.FormValue("token")]
+
+	u := db.GetUser(id)
 	if u == nil { ko(w); return }
 
 	w.Write([]byte(u.Name+"\n"+u.Email))
@@ -245,6 +247,7 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		u := db.GetUser2(login)
+		if u == nil { ko(w) }
 		s := services[key]
 		if s == nil { ko(w); return }
 		token := NewToken(s.Key)
@@ -253,6 +256,7 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+/*
 func generate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
@@ -278,6 +282,7 @@ func check(w http.ResponseWriter, r *http.Request) {
 		ko(w)
 	}
 }
+*/
 
 func chain(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
