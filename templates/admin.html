@@ -33,6 +33,8 @@
 			<thead>
 				<tr>
 					<th>Name</th>
+					<th>Address</th>
+					<th>Contact</th>
 					<th>Token</th>
 				</tr>
 			</thead>
@@ -40,6 +42,8 @@
 				{{ range .Services }}
 				<tr>
 					<td><a href="{{ .Url }}">{{ .Name }}</a></td>
+					<td>{{ .Address }}</td>
+					<td><a href="mailto:{{ .Email }}">{{ .Email }}</a></td>
 					<td>{{ .Key }}</td>
 				</tr>
 				{{ end }}

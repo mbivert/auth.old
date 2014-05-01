@@ -3,7 +3,6 @@ package main
 import (
 	_ "github.com/lib/pq"
 	"database/sql"
-	"log"
 )
 
 var Admin User = User {
@@ -17,6 +16,8 @@ var Auth  Service = Service {
 		Name	:		"AAS",
 		Url		:		"http://auth.awesom.eu",
 		Key		:		RandomString(64),
+		Address	:		"127.0.0.1",
+		Email	:		"mathieu.root@gmail.com",
 }
 
 
@@ -62,6 +63,8 @@ func (db *Database) createTables() {
 			name		TEXT		UNIQUE,
 			url			TEXT		UNIQUE,
 			key			TEXT		UNIQUE,
+			address		INET,
+			email		TEXT,
 			PRIMARY KEY ("id")
 		)
 	`)
@@ -89,7 +92,7 @@ func (db *Database) createAuth() {
 
 func (db *Database) loadServices() {
 	rows, err := db.Query(`
-		SELECT id, name, url, key
+		SELECT id, name, url, key, address, email
 		FROM services`)
 	if err != nil {
 		LogFatal(err)
@@ -97,8 +100,7 @@ func (db *Database) loadServices() {
 
 	for rows.Next() {
 		var s Service
-		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key)
-		log.Println(s)
+		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key, &s.Address, &s.Email)
 		services[s.Key] = &s
 	}
 
@@ -176,18 +178,19 @@ func (db *Database) IsAdmin(id int32) bool {
 // Services
 func (db *Database) AddService(s *Service) error {
 	return db.QueryRow(`INSERT INTO
-		services(name, url, key)
-		VALUES($1, $2, $3)
-		RETURNING id`, s.Name, s.Url, s.Key).Scan(&s.Id)
+		services(name, url, key, address, email)
+		VALUES($1, $2, $3, $4, $5)
+		RETURNING id`, s.Name, s.Url, s.Key, s.Address, s.Email).Scan(&s.Id)
 }
 
 func (db *Database) GetService(id int32) *Service {
 	var s Service
 
 	err := db.QueryRow(`
-		SELECT id, name, url, key
+		SELECT id, name, url, key, address, email
 		FROM services
-		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url, &s.Key)
+		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url,
+			&s.Key, &s.Address, &s.Email)
 
 	if err != nil {
 		LogError(err)

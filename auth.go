@@ -125,12 +125,12 @@ func GetTokens(token string) []*Token {
 	return utokens[tokens[token]]
 }
 
-func AddService(name, url string) (string, error) {
+func AddService(name, url, address, email string) (string, error) {
 	if name == "" || url == "" {
 		return "", errors.New("")
 	}
 
-	s := Service{ -1, name, url, RandomString(64) }
+	s := Service{ -1, name, url, RandomString(64), address, email }
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}
@@ -138,4 +138,11 @@ func AddService(name, url string) (string, error) {
 	services[s.Key] = &s
 
 	return s.Key, nil
+}
+
+func CheckService(key, address string) bool {
+	s := services[key]
+	if s == nil { return false }
+
+	return s.Address == address
 }

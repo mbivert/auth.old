@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"math/rand"
 	"time"
+	"strings"
 )
 
 var port = flag.String("port", "8080", "Listening HTTP port")
@@ -212,8 +213,9 @@ func discover(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" { ko(w); return }
 
 	name, url := r.FormValue("name"), r.FormValue("url")
+	address, email := r.FormValue("address"), r.FormValue("email")
 
-	key, err := AddService(name, url)
+	key, err := AddService(name, url, address, email)
 	if err != nil { ko(w); return }
 
 	w.Write([]byte(key))
@@ -226,9 +228,13 @@ func update(w http.ResponseWriter, r *http.Request) {
 func info(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
-	id := tokens[r.FormValue("token")]
+	token, key := r.FormValue("token"), r.FormValue("key")
 
-	u := db.GetUser(id)
+	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+		ko(w); return
+	}
+
+	u := db.GetUser(tokens[token])
 	if u == nil { ko(w); return }
 
 	w.Write([]byte(u.Name+"\n"+u.Email))
@@ -238,6 +244,10 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
 	login, key := r.FormValue("login"), r.FormValue("key")
+
+	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+		ko(w); return
+	}
 
 	if isToken(login) {
 		if CheckToken(&Token{ key, login }) {
@@ -256,38 +266,16 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
-func generate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
-	u := db.GetUser2(r.FormValue("login"))
-
-	s := services[r.FormValue("key")]
-	if s == nil { ko(w); return }
-
-	// XXX check the ip address
-
-	token := NewToken(s.Key)
-	StoreToken(u.Id, token)
-
-	ok(w)
-}
-
-func check(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
-	if CheckToken(&Token{ r.FormValue("key"), r.FormValue("token") }) {
-		ok(w)
-	} else {
-		ko(w)
-	}
-}
-*/
-
 func chain(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
-	token := Token{ r.FormValue("key"), r.FormValue("token") }
+	key, tok := r.FormValue("key"), r.FormValue("token") 
+
+	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+		ko(w); return
+	}
+
+	token := Token{ key, tok }
 
 	ntoken := ChainToken(&token)
 	if ntoken != nil {

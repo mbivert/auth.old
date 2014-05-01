@@ -70,10 +70,12 @@
 	All parameters are non-empty string.
 	<ul>
 		<li>
-			<b>POST /api/discover name=... url=... ip=...</b>, register the service to the AAS <br />
+			<b>POST /api/discover name=... url=... address=... email=</b>, register the service to the AAS <br />
 			Return a key identifying the service/ko. <br />
-			All the following requests but <i>info</i> <b>must</b> have a "key=..."  value. <br />
-			Manually contact the admnistrator if you lose the key.
+			All the following requests but <i>info</i> <b>must</b> have a "key=..."  value. The association
+			ip/key will be check at each request. IP adress format must match <br />
+			Manually contact the admnistrator if you lose the key. Be sure not to mess the parameters at
+			registration.
 		</li>
 		<li>
 			<b>POST /api/update </b> , update the key for the service. <br />
@@ -100,7 +102,7 @@
 <h2> Example </h2>
 <p>
 	To register a new service:
-	<pre><code>(earth)$ curl --data 'name=thipi&url=http://thipi.awesom.eu/' http://localhost:8080/api/discover
+	<pre><code>(earth)$ curl --data 'name=thipi&url=http://thipi.awesom.eu/&address=127.0.0.1&email=contact@awesom.eu' http://localhost:8080/api/discover
 K4U3cbACnEMYFfzLaTgwAspuR7NQ6S9Hdhg4LhBxTvKMRsqdtHTkSQxeKtZRGnR1
 </code></pre>
 	Service is now registered with given name and URL. The returned key shall now

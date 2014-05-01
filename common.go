@@ -12,6 +12,8 @@ type Service struct {
 	Name		string
 	Url			string
 	Key			string
+	Address		string
+	Email		string
 }
 
 var db			*Database
