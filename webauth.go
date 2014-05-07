@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"math/rand"
 	"time"
+	"strconv"
 	"strings"
 )
 
@@ -237,7 +238,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 	u := db.GetUser(tokens[token])
 	if u == nil { ko(w); return }
 
-	w.Write([]byte(u.Name+"\n"+u.Email))
+	w.Write([]byte(strconv.Itoa(int(u.Id))+"\n"+u.Name+"\n"+u.Email))
 }
 
 func alogin(w http.ResponseWriter, r *http.Request) {
@@ -314,6 +315,7 @@ func main() {
 //	http.HandleFunc("/api/check", check)
 	http.HandleFunc("/api/login", alogin)
 	http.HandleFunc("/api/chain", chain)
+//	http.HandleFunc("/api/logout", alogout)
 
 	// Captchas
 	http.Handle("/captcha/",

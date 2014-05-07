@@ -39,7 +39,7 @@ func NewDatabase() (db *Database) {
 	return
 }
 
-func (db *Database) createTable(descr string) {
+func (db *Database) createFatal(descr string) {
 	_, err := db.Query(descr)
 	if err != nil {
 		LogFatal(err)
@@ -47,7 +47,7 @@ func (db *Database) createTable(descr string) {
 }
 
 func (db *Database) createTables() {
-	db.createTable(`CREATE TABLE IF NOT EXISTS
+	db.createFatal(`CREATE TABLE IF NOT EXISTS
 		users(
 			id						SERIAL,
 			name		TEXT		UNIQUE,
@@ -57,7 +57,7 @@ func (db *Database) createTables() {
 		)
 	`)
 
-	db.createTable(`CREATE TABLE IF NOT EXISTS
+	db.createFatal(`CREATE TABLE IF NOT EXISTS
 		services(
 			id						SERIAL,
 			name		TEXT		UNIQUE,
@@ -105,6 +105,7 @@ func (db *Database) loadServices() {
 	}
 
 }
+
 func (db *Database) Init() {
 	db.createTables()
 	db.createAdmin()
