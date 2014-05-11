@@ -18,6 +18,3 @@ type Service struct {
 
 var db			*Database
 var	services	map[string]*Service
-
-var	utokens		map[int32][]*Token
-var	tokens		map[string]int32

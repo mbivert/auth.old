@@ -2,11 +2,14 @@ package main
 
 import (
 	"math/rand"
+	"sync"
+	"time"
 )
 
 const (
-	LenToken	=	64
-	alnum 		=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
+	LenToken		=	64
+	TokenTimeout	=	3600		// 1h
+	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
 type Token struct {
@@ -14,49 +17,107 @@ type Token struct {
 	Token		string
 }
 
-func RandomString(n int) string {
+var	utokens		map[int32][]*Token
+var	tokens		map[string]int32
+var timers		map[string]chan string
+var mtoken		*sync.Mutex
+
+func randomString(n int) string {
 	buf := make([]byte, n)
-	for i := 0; i < n; i++ {
+
+	for i := 0; i < LenToken; i++ {
 		buf[i] = alnum[rand.Intn(len(alnum))]
 	}
+
 	return string(buf)
 }
 
-func NewToken(key string) *Token {
-	return &Token{ key, RandomString(LenToken) }
+func mkToken() string {
+gen:
+	token := randomString(LenToken)
+	if _, exists := tokens[token]; exists {
+		goto gen
+	}
+
+	return token
 }
 
-func CheckToken(token *Token) bool {
-	return tokens[token.Token] != 0
-}
+func Timeout(token string, update chan string) {
+	timeout := time.Tick(TokenTimeout*time.Second)
 
-func ChainToken(token *Token) (ntoken *Token) {
-	if !CheckToken(token) { return nil }
-
-	ntoken = NewToken(token.Key)
-
-	UpdateToken(token.Token, ntoken.Token)
-
-	return
-}
-
-func StoreToken(id int32, token *Token) {
-	tokens[token.Token] = id
-	utokens[id] = append(utokens[id], token)
-}
-
-func UpdateToken(old, new string) {
-	id := tokens[old]
-	delete(tokens, old)
-	tokens[new] = id
-
-	for i := range utokens[id] {
-		if utokens[id][i].Token == old {
-			utokens[id][i].Token = new
+	for {
+		select {
+		case <- timeout:
+			DelToken(token)
+			return
+		case token = <- update:
+			timeout = time.Tick(TokenTimeout*time.Second)
 		}
 	}
 }
 
-func DelToken(token *Token) {
+func NewToken(id int32, key string) *Token {
+	mtoken.Lock()
+		token := mkToken()
+		tokens[token] = id
+		timers[token] = make(chan string)
+		go Timeout(token, timers[token])
+		res := &Token{ key, token }
+		utokens[id] = append(utokens[id], res)
+	mtoken.Unlock()
+
+	return res
+}
+
+func CheckToken(token string) bool {
+	mtoken.Lock()
+		_, ok := tokens[token]
+	mtoken.Unlock()
+
+	return ok
+}
+
+func DelToken(token string) {
+	mtoken.Lock()
+		if id := tokens[token]; id > 0 {
+			n := len(utokens[id])
+			for i := range utokens[id] {
+				if utokens[id][i].Token == token {
+					utokens[id][i]	= utokens[id][n]
+					utokens[id]		= utokens[id][0:n-1]
+					break
+				}
+			}
+		}
+	mtoken.Unlock()
+}
+
+func UpdateToken(token string, key string) string {
+	ret := ""
+
+	mtoken.Lock()
+		// remove old token
+		if id := tokens[token]; id > 0 {
+			update := timers[token]
+			delete(tokens, token)
 	
+			// create new one
+			ret = mkToken()
+			tokens[ret] = id
+			timers[ret] = update
+
+			// update timeout
+			update <- ret
+
+			// update value
+			for i := range utokens[id] {
+				if utokens[id][i].Token == token {
+					utokens[id][i].Token = ret
+					break
+				}
+			}
+		}
+	mtoken.Unlock()
+
+	return ret
 }

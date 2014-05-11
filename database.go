@@ -15,7 +15,7 @@ var Auth  Service = Service {
 		Id		:		1,			// by convention
 		Name	:		"AAS",
 		Url		:		"http://auth.awesom.eu",
-		Key		:		RandomString(64),
+		Key		:		randomString(64),
 		Address	:		"127.0.0.1",
 		Email	:		"mathieu.root@gmail.com",
 }

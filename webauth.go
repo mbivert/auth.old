@@ -11,6 +11,7 @@ import (
 	"time"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var port = flag.String("port", "8080", "Listening HTTP port")
@@ -102,7 +103,6 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 */
-
 	token, err := Login(r.FormValue("login"))
 	if err != nil {
 		LogHttp(w, err)
@@ -145,7 +145,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func admin(w http.ResponseWriter, r *http.Request) {
 	token, err := GetToken(r)
-	if err != nil || !ACheckToken(token) || !IsAdmin(token) {
+	if err != nil || !CheckToken(token) || !IsAdmin(token) {
 		ko(w); return
 	}
 
@@ -163,17 +163,11 @@ func admin(w http.ResponseWriter, r *http.Request) {
 	writeFiles(w, "templates/footer.html")
 }
 
-func getSettings(w http.ResponseWriter, r *http.Request) {
-	var tokens []*Token
-	token, err := GetToken(r)
-	if err == nil {
-		tokens = GetTokens(token)
-	}
-
-	if err != nil { LogHttp(w, err); return }
+func getSettings(w http.ResponseWriter, r *http.Request, token string) {
+	toks := GetTokens(token)
 
 	writeFiles(w, "templates/header.html", GetNavbar(r))
-	d := struct { Tokens []*Token }{ tokens }
+	d := struct { Tokens []*Token }{ toks }
 	if err := stmpl.Execute(w, &d); err != nil {
 		LogHttp(w, err); return
 	}
@@ -188,26 +182,24 @@ func postSettings(w http.ResponseWriter, r *http.Request) {
 func settings(w http.ResponseWriter, r *http.Request) {
 	token, err := GetToken(r)
 	if err == nil {
-		if !ACheckToken(token) {
+		if !CheckToken(token) {
 			err = errors.New("Wrong Token")
 		}
 	}
 	if err != nil { LogHttp(w, err); return }
 
-	ntoken := RandomString(LenToken)
+	ntoken := UpdateToken(token, Auth.Key)
 	err = SetToken(w, ntoken)
 	if err != nil { LogHttp(w, err); return }
 
 	switch r.Method {
 	case "GET":
-		getSettings(w, r)
+		getSettings(w, r, ntoken)
 	case "POST":
 		postSettings(w, r)
 	default:
 		ko(w)
 	}
-
-	UpdateToken(token, ntoken)
 }
 
 func discover(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +243,7 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isToken(login) {
-		if CheckToken(&Token{ key, login }) {
+		if CheckToken(login) {
 			ok(w)
 		} else {
 			ko(w)
@@ -261,8 +253,7 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 		if u == nil { ko(w) }
 		s := services[key]
 		if s == nil { ko(w); return }
-		token := NewToken(s.Key)
-		StoreToken(u.Id, token)
+		NewToken(u.Id, s.Key)
 		w.Write([]byte("new"))
 	}
 }
@@ -270,17 +261,15 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 func chain(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" { ko(w); return }
 
-	key, tok := r.FormValue("key"), r.FormValue("token") 
+	key, token := r.FormValue("key"), r.FormValue("token") 
 
 	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
 		ko(w); return
 	}
 
-	token := Token{ key, tok }
-
-	ntoken := ChainToken(&token)
-	if ntoken != nil {
-		w.Write([]byte(ntoken.Token))
+	ntoken := UpdateToken(token, key)
+	if ntoken != "" {
+		w.Write([]byte(ntoken))
 	} else {
 		ko(w)
 	}
@@ -291,6 +280,9 @@ func main() {
 	services = map[string]*Service{}
 	utokens = map[int32][]*Token{}
 	tokens = map[string]int32{}
+	timers = map[string]chan string{}
+	mtoken = &sync.Mutex{}
+
 	// db requires services to be  created
 	db = NewDatabase()
 //	services[Auth.Key] = &Auth

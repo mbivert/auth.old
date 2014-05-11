@@ -102,7 +102,7 @@ func GetNavbar(r *http.Request) string {
 
 	// if connected
 	token, err := GetToken(r)
-	if err == nil && CheckToken(&Token{ Auth.Key, token }) {
+	if err == nil && CheckToken(token) {
 		navbar = "templates/navbar2.html"
 		if IsAdmin(token) {
 			navbar = "templates/navbar3.html"
@@ -110,8 +110,4 @@ func GetNavbar(r *http.Request) string {
 	}
 
 	return navbar
-}
-
-func ACheckToken(token string) bool {
-	return CheckToken(&Token{ Auth.Key, token })
 }

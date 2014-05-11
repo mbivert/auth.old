@@ -82,27 +82,24 @@ func Register(name, email string) error {
 		return err
 	}
 
-	token := NewToken(Auth.Key)
-
-	StoreToken(u.Id, token)
+	token := NewToken(u.Id, Auth.Key)
 
 	return sendToken(email, token)
 }
 
 func Login(login string) (string, error) {
 	if isToken(login) {
-		ntoken := ChainToken(&Token{ Auth.Key, login })
-		if ntoken == nil {
+		ntoken := UpdateToken(login, Auth.Key)
+		if ntoken == "" {
 			return "", errors.New("Wrong Token")
 		}
-		return ntoken.Token, nil
+		return ntoken, nil
 	}
 
 	u := db.GetUser2(login)
 	if u == nil { return "", errors.New("Wrong name/email") }
 
-	token := NewToken(Auth.Key)
-	StoreToken(u.Id, token)
+	token := NewToken(u.Id, Auth.Key)
 
 	return "", sendToken(u.Email, token)
 }
@@ -111,7 +108,7 @@ func Login(login string) (string, error) {
 }*/
 
 func Logout(token string) {
-	DelToken(&Token{ Auth.Key, token })
+	DelToken(token)
 }
 
 /*func Unregister() {
@@ -130,7 +127,7 @@ func AddService(name, url, address, email string) (string, error) {
 		return "", errors.New("")
 	}
 
-	s := Service{ -1, name, url, RandomString(64), address, email }
+	s := Service{ -1, name, url, randomString(64), address, email }
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}
