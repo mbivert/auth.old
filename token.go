@@ -3,13 +3,13 @@ package main
 import (
 	"math/rand"
 	"time"
-	"log"
-	"reflect"
+//	"log"
+//	"reflect"
 )
 
 const (
 	LenToken		=	64
-	TokenTimeout	=	20		// 1h
+	TokenTimeout	=	3600		// 1h
 	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
@@ -18,7 +18,7 @@ type Token struct {
 	Token		string
 }
 
-var	utokens		map[int32][]*Token
+var	utokens		map[int32][]Token
 var	tokens		map[string]int32
 var timeouts	map[int64][]string
 
@@ -58,7 +58,7 @@ func (m NewMsg) process() {
 	token := mkToken()
 	// store token
 	tokens[token] = m.uid
-	utokens[m.uid] = append(utokens[m.uid], &Token{ m.key, token })
+	utokens[m.uid] = append(utokens[m.uid], Token{ m.key, token })
 
 	// setup timeout
 	exptime := time.Now().Unix()+TokenTimeout
@@ -75,7 +75,6 @@ type RemoveMsg struct {
 func (m RemoveMsg) process() {
 	if id := tokens[m.token]; id > 0 {
 		n := len(utokens[id])
-		log.Println("Remove: ", n, ", ", utokens[id])
 		for i := range utokens[id] {
 			if utokens[id][i].Token == m.token {
 				utokens[id][i]	= utokens[id][n-1]
@@ -129,16 +128,33 @@ func (m UpdateMsg) process() {
 	m.answer <- token
 }
 
+type AllMsg struct {
+	token	string
+	answer	chan []Token
+}
+
+func (m AllMsg) process() {
+	m.answer <- utokens[tokens[m.token]]
+}
+
+type OwnMsg struct {
+	token	string
+	answer	chan int32
+}
+
+func (m OwnMsg) process() {
+	m.answer <- tokens[m.token]
+}
+
 // background processes
 func ProcessMsg() {
 	chanmsg = make(chan Msg)
 	for {
 		m := <- chanmsg
-		log.Println("Process: ", reflect.TypeOf(m), ", ", m)
+//		log.Println("Process: ", reflect.TypeOf(m), ", ", m)
 		m.process()
 	}
 }
-
 func Timeouts() {
 	for {
 		time.Sleep(2*time.Second)
@@ -178,4 +194,20 @@ func UpdateToken(token string) string {
 
 func RemoveToken(token string) {
 	chanmsg <- RemoveMsg{ token }
+}
+
+func AllTokens(token string) []Token {
+	answer := make(chan []Token, 1)
+
+	chanmsg <- AllMsg { token, answer }
+
+	return <- answer
+}
+
+func OwnerToken(token string) int32 {
+	answer := make(chan int32, 1)
+
+	chanmsg  <- OwnMsg { token, answer }
+
+	return <- answer
 }

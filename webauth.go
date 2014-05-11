@@ -20,11 +20,11 @@ var rtmpl = template.Must(
 var ltmpl = template.Must(
 	template.New("login.html").ParseFiles("templates/login.html"))
 var stmpl = template.Must(
-	template.New("settings.html").Funcs( template.FuncMap{
+	template.New("sessions.html").Funcs( template.FuncMap{
 		"GetService": func(key string) *Service {
 			return services[key]
 		},
-		}).ParseFiles("templates/settings.html"))
+		}).ParseFiles("templates/sessions.html"))
 var atmpl = template.Must(
 	template.New("admin.html").Funcs( template.FuncMap{
 		"GetUser": func(id int32) *User {
@@ -40,12 +40,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 		ko(w); return
 	}
 
-	writeFiles(w, "templates/header.html", GetNavbar(r),
+	token, _ := GetToken(r)	
+	writeFiles(w, "templates/header.html", GetNavbar(token),
 		"templates/index.html", "templates/footer.html")
 }
 
 func getRegister(w http.ResponseWriter, r *http.Request) {
-	writeFiles(w, "templates/header.html", GetNavbar(r))
+	token, _ := GetToken(r)	
+	writeFiles(w, "templates/header.html", GetNavbar(token))
 
 	d := struct { CaptchaId string }{ captcha.New() }
 
@@ -116,7 +118,7 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 	err = SetToken(w, token)
 	if err != nil { LogHttp(w, err); return }
 
-	http.Redirect(w, r, "/settings", http.StatusFound)
+	http.Redirect(w, r, "/sessions", http.StatusFound)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -125,8 +127,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 		getLogin(w, r)
 	case "POST":
 		postLogin(w, r)
-	default:
-		ko(w)
 	}
 }
 
@@ -150,8 +150,9 @@ func admin(w http.ResponseWriter, r *http.Request) {
 
 	writeFiles(w, "templates/header.html", "templates/navbar3.html")
 
+	// XXX make a copy of utokens/services
 	d := struct {
-		Users		map[int32][]*Token
+		Users		map[int32][]Token
 		Services	map[string]*Service
 	}{ utokens, services }
 
@@ -163,10 +164,10 @@ func admin(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSettings(w http.ResponseWriter, r *http.Request, token string) {
-	toks := GetTokens(token)
+	toks := AllTokens(token)
 
-	writeFiles(w, "templates/header.html", GetNavbar(r))
-	d := struct { Tokens []*Token }{ toks }
+	writeFiles(w, "templates/header.html", GetNavbar(token))
+	d := struct { Tokens []Token }{ toks }
 	if err := stmpl.Execute(w, &d); err != nil {
 		LogHttp(w, err); return
 	}
@@ -174,11 +175,17 @@ func getSettings(w http.ResponseWriter, r *http.Request, token string) {
 	writeFiles(w, "templates/footer.html")
 }
 
-func postSettings(w http.ResponseWriter, r *http.Request) {
-	// TODO
+func postSettings(w http.ResponseWriter, r *http.Request, token string) {
+	todel := r.FormValue("token")
+
+	if OwnerToken(todel) == OwnerToken(token) {
+		RemoveToken(todel)
+	}
+
+	http.Redirect(w, r, "/sessions", http.StatusFound)
 }
 
-func settings(w http.ResponseWriter, r *http.Request) {
+func sessions(w http.ResponseWriter, r *http.Request) {
 	token, err := GetToken(r)
 	if err == nil {
 		if !CheckToken(token) {
@@ -195,15 +202,11 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		getSettings(w, r, ntoken)
 	case "POST":
-		postSettings(w, r)
-	default:
-		ko(w)
+		postSettings(w, r, ntoken)
 	}
 }
 
 func discover(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" { ko(w); return }
-
 	name, url := r.FormValue("name"), r.FormValue("url")
 	address, email := r.FormValue("address"), r.FormValue("email")
 
@@ -218,8 +221,6 @@ func update(w http.ResponseWriter, r *http.Request) {
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
 	token, key := r.FormValue("token"), r.FormValue("key")
 
 	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
@@ -233,8 +234,6 @@ func info(w http.ResponseWriter, r *http.Request) {
 }
 
 func alogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
 	login, key := r.FormValue("login"), r.FormValue("key")
 
 	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
@@ -258,8 +257,6 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func chain(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
 	key, token := r.FormValue("key"), r.FormValue("token") 
 
 	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
@@ -274,10 +271,23 @@ func chain(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func alogout(w http.ResponseWriter, r *http.Request) {
+	key, token := r.FormValue("key"), r.FormValue("token") 
+
+	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+		ko(w); return
+	}
+
+	RemoveToken(token)
+	ok(w)
+}
+
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	// Data init
 	services = map[string]*Service{}
-	utokens = map[int32][]*Token{}
+	utokens = map[int32][]Token{}
 	tokens = map[string]int32{}
 	timeouts = map[int64][]string{}
 
@@ -286,29 +296,23 @@ func main() {
 
 	// db requires services to be  created
 	db = NewDatabase()
-//	services[Auth.Key] = &Auth
-	rand.Seed(time.Now().UnixNano())
-
-	// XXX load services
 
 	// Auth website
 	http.HandleFunc("/", index)
 	http.HandleFunc("/register/", register)
-//	http.HandleFunc("/unregister/", unregister)
+//	http.HandleFunc("/unregister/", unregister) // TODO
 	http.HandleFunc("/login/", login)
 	http.HandleFunc("/logout/", logout)
 	http.HandleFunc("/admin/", admin)
-	http.HandleFunc("/settings/", settings)
+	http.HandleFunc("/sessions/", sessions)
 
 	// API
 	http.HandleFunc("/api/discover", discover)
 	http.HandleFunc("/api/update", update)
 	http.HandleFunc("/api/info", info)
-//	http.HandleFunc("/api/generate", generate)
-//	http.HandleFunc("/api/check", check)
 	http.HandleFunc("/api/login", alogin)
 	http.HandleFunc("/api/chain", chain)
-//	http.HandleFunc("/api/logout", alogout)
+	http.HandleFunc("/api/logout", alogout)
 
 	// Captchas
 	http.Handle("/captcha/",

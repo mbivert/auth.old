@@ -115,11 +115,7 @@ func Logout(token string) {
 }*/
 
 func IsAdmin(token string) bool {
-	return db.IsAdmin(tokens[token])
-}
-
-func GetTokens(token string) []*Token {
-	return utokens[tokens[token]]
+	return db.IsAdmin(OwnerToken(token))
 }
 
 func AddService(name, url, address, email string) (string, error) {

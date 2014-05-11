@@ -97,12 +97,11 @@ func GetToken(r *http.Request) (token string, err error) {
 	return
 }
 
-func GetNavbar(r *http.Request) string {
+func GetNavbar(token string) string {
 	navbar := "templates/navbar.html"
 
 	// if connected
-	token, err := GetToken(r)
-	if err == nil && CheckToken(token) {
+	if CheckToken(token) {
 		navbar = "templates/navbar2.html"
 		if IsAdmin(token) {
 			navbar = "templates/navbar3.html"

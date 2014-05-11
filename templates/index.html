@@ -52,50 +52,111 @@
 	</ol>
 </p>
 
-<h1> Settings </h1>
-<img src="/static/imgs/settings.png" alt="settings" />
+<h1> Sessions </h1>
+<img src="/static/imgs/sessions.png" alt="settings" />
 <p>
 	The settings allows to user to:
 	<ul>
-		<li> Change its personnal informations </li>
-		<li> View all the current tokens. At least the token for the AAS should be displayed. </li>
+		<li>
+			View his current sessions/tokens.
+			At least the token for the AAS should be displayed;
+		</li>
+		<li>
+			Eventually, termination sessions.
+		</li>
+	</ul>
+</p>
+
+<h1> Admin </h1>
+<img src="/static/imgs/admin.png" alt="settings" />
+<p>
+	The administrator pages essentially allows to manage services:
+	<ul>
+		<li>
+			View all registered service;
+		</li>
+		<li>
+			Register a service, or authorize a service to register;
+		</li>
+		<li>
+			Set service registration mode:
+			<ol>
+				<li> <b>Automatic</b>: the server accept every services;
+				<li> <b>Manual (default) </b>: requests for new services are
+					queued and manually autorized by administrator
+				<li> <b>Disable</b> : only an administrator can
+					add service on the admin page.
+			</ol>
+		</li>
 	</ul>
 </p>
 
 <h1> API </h1>
+The API allows services to communicate with the AAS.
 <h2> Fonctions </h2>
 <p>
 	Services use the AAS through the following HTTP API. Services must
 	have been previously registered to the AAS by an administrator. <br />
-	All parameters are non-empty string.
+	All parameters are non-empty string. <br />
+	Every requests but <i>discover</i> <b>must</b> have a <i>key</i> parameter:
+	the association <i>key</i>/<i>ip</i> is checked upon each request.
 	<ul>
 		<li>
-			<b>POST /api/discover name=... url=... address=... email=</b>, register the service to the AAS <br />
-			Return a key identifying the service/ko. <br />
-			All the following requests but <i>info</i> <b>must</b> have a "key=..."  value. The association
-			ip/key will be check at each request. IP adress format must match <br />
-			Manually contact the admnistrator if you lose the key. Be sure not to mess the parameters at
-			registration.
+			<b>GET /api/discover name=... url=... address=... email=</b> <br />
+			Register a service to the AAS <br />
+			Returns:
+			<ul>
+				<li> a key identifying the service </li>
+				<li> ok : a key has been generated; it will be sent by email upon administator approval </li>
+				<li> ko : wrong or missing data supplied or discovering disabled </li>
+			</ul>
 		</li>
 		<li>
-			<b>POST /api/update </b> , update the key for the service. <br />
-			Return the new key/ko.
+			<b>GET /api/update </b> <br />
+			Update a service's key. <br />
+			Returns:
+			<ul>
+				<li> the new key </li>
+				<li> ko : wrong key, key/ip </li>
+			</ul>
 		</li>
 		<li>
-			<b>GET /api/info?token=...</b>, retrieve info about the token owner <br />
-			Returns « name\n email »/<i>ko</i>
+			<b>GET /api/info?token=...</b> <br />
+			Retrieve info about the token owner <br />
+			Returns:
+			<ul>
+				<li> on 3 lines:
+				<ul>
+					<li> id </li>
+					<li> name </li>
+					<li> email </li>
+				</ul>
+				<li>ko : invalid token</li>
+			</ul>
+			<b>Note: </b> <i>info</i> may be used to check the validity
+			of a token.
+		<li>
+			<b>GET /api/login?login=...</b> <br />
+			Login the user to the AAS for the service who request it. <br />
+			Returns:
+			<ul>
+				<li> new : a new token has been generated (a name or email was found) </li>
+				<li> ok : a valid token was given </li>
+				<li> ko : wrong token, name or email </li>
+			</ul>
 		</li>
 		<li>
-			<b>GET /api/login?login=...</b>, Login the user to the AAS for the service
-			who request it. <br />
-			If login is a name/email, a new token will be available on the AAS. <br />
-			Else, if it's a valid token, the user will be effectively login. <br />
-			Returns <i>new</i> if a new token has been generated, <i>ok</i> if the login
-			was a valid token, else <i>ko</i>.
+			<b>GET /api/chain?token=...</b><br />
+			Update the given token if its valid. <br />
+			Returns:
+			<ul>
+				<li> the new token </li>
+				<li> ko : wrong token </li>.
+			</ul>
 		</li>
 		<li>
-			<b>GET /api/chain?token=...</b>, update the given token if its valid. <br />
-			Returns the new token/<i>ko</i>.
+			<b>GET /logout/token=...</b> <br />
+			Remove the token.
 		</li>
 	</ul>
 </p>
