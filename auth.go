@@ -89,7 +89,7 @@ func Register(name, email string) error {
 
 func Login(login string) (string, error) {
 	if isToken(login) {
-		ntoken := UpdateToken(login, Auth.Key)
+		ntoken := UpdateToken(login)
 		if ntoken == "" {
 			return "", errors.New("Wrong Token")
 		}
@@ -108,7 +108,7 @@ func Login(login string) (string, error) {
 }*/
 
 func Logout(token string) {
-	DelToken(token)
+	RemoveToken(token)
 }
 
 /*func Unregister() {

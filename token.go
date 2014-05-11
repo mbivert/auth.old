@@ -2,13 +2,14 @@ package main
 
 import (
 	"math/rand"
-	"sync"
 	"time"
+	"log"
+	"reflect"
 )
 
 const (
 	LenToken		=	64
-	TokenTimeout	=	3600		// 1h
+	TokenTimeout	=	20		// 1h
 	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
@@ -19,8 +20,13 @@ type Token struct {
 
 var	utokens		map[int32][]*Token
 var	tokens		map[string]int32
-var timers		map[string]chan string
-var mtoken		*sync.Mutex
+var timeouts	map[int64][]string
+
+var chanmsg		chan Msg
+
+type Msg interface {
+	process()
+}
 
 func randomString(n int) string {
 	buf := make([]byte, n)
@@ -42,82 +48,134 @@ gen:
 	return token
 }
 
-func Timeout(token string, update chan string) {
-	timeout := time.Tick(TokenTimeout*time.Second)
+type NewMsg struct {
+	uid		int32
+	key		string
+	answer	chan string
+}
 
+func (m NewMsg) process() {
+	token := mkToken()
+	// store token
+	tokens[token] = m.uid
+	utokens[m.uid] = append(utokens[m.uid], &Token{ m.key, token })
+
+	// setup timeout
+	exptime := time.Now().Unix()+TokenTimeout
+	timeouts[exptime] = append(timeouts[exptime], token)
+
+	// return value
+	m.answer <- token
+}
+
+type RemoveMsg struct {
+	token	string
+}
+
+func (m RemoveMsg) process() {
+	if id := tokens[m.token]; id > 0 {
+		n := len(utokens[id])
+		log.Println("Remove: ", n, ", ", utokens[id])
+		for i := range utokens[id] {
+			if utokens[id][i].Token == m.token {
+				utokens[id][i]	= utokens[id][n-1]
+				utokens[id]		= utokens[id][0:n-1]
+				break
+			}
+		}
+		delete(tokens, m.token)
+	}
+}
+
+type CheckMsg struct {
+	token	string
+	answer	chan bool
+}
+
+func (m CheckMsg) process() {
+	_, ok := tokens[m.token]
+	m.answer <- ok
+}
+
+type UpdateMsg struct {
+	token	string
+	answer	chan string
+}
+
+func (m UpdateMsg) process() {
+	// check old one
+	id := tokens[m.token]
+	if id == 0 { return }
+
+	token := mkToken()
+
+	delete(tokens, m.token)
+
+	// create new one
+	tokens[token] = id
+	// update value
+	for i := range utokens[id] {
+		if utokens[id][i].Token == m.token {
+			utokens[id][i].Token = token
+			break
+		}
+	}
+
+	// setup timeout
+	exptime := time.Now().Unix()+TokenTimeout
+	timeouts[exptime] = append(timeouts[exptime], token)
+
+	// return new one
+	m.answer <- token
+}
+
+// background processes
+func ProcessMsg() {
+	chanmsg = make(chan Msg)
 	for {
-		select {
-		case <- timeout:
-			DelToken(token)
-			return
-		case token = <- update:
-			timeout = time.Tick(TokenTimeout*time.Second)
+		m := <- chanmsg
+		log.Println("Process: ", reflect.TypeOf(m), ", ", m)
+		m.process()
+	}
+}
+
+func Timeouts() {
+	for {
+		time.Sleep(2*time.Second)
+		now := time.Now().Unix()
+		for date, toks := range timeouts {
+			if date <= now {
+				for _, token := range toks {
+					RemoveToken(token)
+				}
+				delete(timeouts, date)
+			}
 		}
 	}
 }
 
-func NewToken(id int32, key string) *Token {
-	mtoken.Lock()
-		token := mkToken()
-		tokens[token] = id
-		timers[token] = make(chan string)
-		go Timeout(token, timers[token])
-		res := &Token{ key, token }
-		utokens[id] = append(utokens[id], res)
-	mtoken.Unlock()
+// API
+func NewToken(uid int32, key string) *Token {
+	answer := make(chan string, 1)
+	chanmsg <- NewMsg{ uid, key, answer }
 
-	return res
+	return &Token{ key, <- answer }
 }
 
 func CheckToken(token string) bool {
-	mtoken.Lock()
-		_, ok := tokens[token]
-	mtoken.Unlock()
+	answer := make(chan bool, 1)
+	chanmsg <- CheckMsg{ token, answer }
 
-	return ok
+	return <- answer
 }
 
-func DelToken(token string) {
-	mtoken.Lock()
-		if id := tokens[token]; id > 0 {
-			n := len(utokens[id])
-			for i := range utokens[id] {
-				if utokens[id][i].Token == token {
-					utokens[id][i]	= utokens[id][n]
-					utokens[id]		= utokens[id][0:n-1]
-					break
-				}
-			}
-		}
-	mtoken.Unlock()
+func UpdateToken(token string) string {
+	answer := make(chan string, 1)
+	chanmsg <- UpdateMsg { token, answer }
+
+	return <- answer
 }
 
-func UpdateToken(token string, key string) string {
-	ret := ""
-
-	mtoken.Lock()
-		// remove old token
-		if id := tokens[token]; id > 0 {
-			update := timers[token]
-			delete(tokens, token)
-	
-			// create new one
-			ret = mkToken()
-			tokens[ret] = id
-			timers[ret] = update
-
-			// update timeout
-			update <- ret
-
-			// update value
-			for i := range utokens[id] {
-				if utokens[id][i].Token == token {
-					utokens[id][i].Token = ret
-					break
-				}
-			}
-		}
-	mtoken.Unlock()
-
-	return ret
+func RemoveToken(token string) {
+	chanmsg <- RemoveMsg{ token }
 }

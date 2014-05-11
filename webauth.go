@@ -11,7 +11,6 @@ import (
 	"time"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var port = flag.String("port", "8080", "Listening HTTP port")
@@ -188,7 +187,7 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil { LogHttp(w, err); return }
 
-	ntoken := UpdateToken(token, Auth.Key)
+	ntoken := UpdateToken(token)
 	err = SetToken(w, ntoken)
 	if err != nil { LogHttp(w, err); return }
 
@@ -267,7 +266,7 @@ func chain(w http.ResponseWriter, r *http.Request) {
 		ko(w); return
 	}
 
-	ntoken := UpdateToken(token, key)
+	ntoken := UpdateToken(token)
 	if ntoken != "" {
 		w.Write([]byte(ntoken))
 	} else {
@@ -280,8 +279,10 @@ func main() {
 	services = map[string]*Service{}
 	utokens = map[int32][]*Token{}
 	tokens = map[string]int32{}
-	timers = map[string]chan string{}
-	mtoken = &sync.Mutex{}
+	timeouts = map[int64][]string{}
+
+	go ProcessMsg()
+	go Timeouts()
 
 	// db requires services to be  created
 	db = NewDatabase()
