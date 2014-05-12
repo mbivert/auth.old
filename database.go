@@ -16,6 +16,7 @@ var Auth  Service = Service {
 		Name	:		"AAS",
 		Url		:		"http://auth.awesom.eu",
 		Key		:		randomString(64),
+		Mode	:		true,
 		Address	:		"127.0.0.1",
 		Email	:		"mathieu.root@gmail.com",
 }
@@ -63,6 +64,7 @@ func (db *Database) createTables() {
 			name		TEXT		UNIQUE,
 			url			TEXT		UNIQUE,
 			key			TEXT		UNIQUE,
+			mode		BOOLEAN,
 			address		INET,
 			email		TEXT,
 			PRIMARY KEY ("id")
@@ -92,7 +94,7 @@ func (db *Database) createAuth() {
 
 func (db *Database) loadServices() {
 	rows, err := db.Query(`
-		SELECT id, name, url, key, address, email
+		SELECT id, name, url, key, mode, address, email
 		FROM services`)
 	if err != nil {
 		LogFatal(err)
@@ -100,13 +102,15 @@ func (db *Database) loadServices() {
 
 	for rows.Next() {
 		var s Service
-		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key, &s.Address, &s.Email)
+		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key, &s.Mode, &s.Address, &s.Email)
 		services[s.Key] = &s
 	}
 
 }
 
 func (db *Database) Init() {
+	services = map[string]*Service{}
+
 	db.createTables()
 	db.createAdmin()
 	db.createAuth()
@@ -172,26 +176,51 @@ func (db *Database) IsAdmin(id int32) bool {
 	return err == nil
 }
 
+func (db *Database) GetAdmMail() (emails []string) {
+	rows, err := db.Query(`SELECT email
+		FROM users
+	WHERE admin = true`)
+	if err != nil {
+		LogError(err)
+		return
+	}
+
+	for rows.Next() {
+		var email string
+		rows.Scan(&email)
+		emails = append(emails, email)
+	}
+
+	return
+}
+
 //	DelUser()
 //	UpdateUser()
 //	Activate()
 
 // Services
 func (db *Database) AddService(s *Service) error {
-	return db.QueryRow(`INSERT INTO
-		services(name, url, key, address, email)
-		VALUES($1, $2, $3, $4, $5)
-		RETURNING id`, s.Name, s.Url, s.Key, s.Address, s.Email).Scan(&s.Id)
+	err := db.QueryRow(`INSERT INTO
+		services(name, url, key, mode, address, email)
+		VALUES($1, $2, $3, $4, $5, $6)
+		RETURNING id`, s.Name, s.Url, s.Key, s.Mode, s.Address, s.Email).Scan(&s.Id)
+
+	if err != nil {		return err
+	}
+
+	services[s.Key] = s
+
+	return nil
 }
 
 func (db *Database) GetService(id int32) *Service {
 	var s Service
 
 	err := db.QueryRow(`
-		SELECT id, name, url, key, address, email
+		SELECT id, name, url, key, mode, address, email
 		FROM services
 		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url,
-			&s.Key, &s.Address, &s.Email)
+			&s.Key, &s.Mode, &s.Address, &s.Email)
 
 	if err != nil {
 		LogError(err)
@@ -199,6 +228,27 @@ func (db *Database) GetService(id int32) *Service {
 	}
 
 	return &s
+}
+
+func (db *Database) GetService2(key string) *Service {
+	return services[key]
+}
+
+func (db *Database) SetMode(id int32, on bool) {
+	var key string
+
+	if id == Auth.Id { return }
+
+	err := db.QueryRow(`
+		UPDATE services
+			SET mode = $1
+			WHERE id = $2
+		RETURNING key`, on, id).Scan(&key)
+	if err != nil {
+		LogError(err)
+	} else {
+		services[key].Mode = on
+	}
 }
 
 //	DelService()

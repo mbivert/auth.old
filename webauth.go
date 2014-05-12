@@ -148,6 +148,14 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		ko(w); return
 	}
 
+	if r.FormValue("action") == "enable" {
+		id, _ := strconv.Atoi(r.FormValue("id"))
+		db.SetMode(int32(id), true)
+	} else if r.FormValue("action") == "disable" {
+		id, _ := strconv.Atoi(r.FormValue("id"))
+		db.SetMode(int32(id), false)
+	}
+
 	writeFiles(w, "templates/header.html", "templates/navbar3.html")
 
 	// XXX make a copy of utokens/services
@@ -227,7 +235,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 		ko(w); return
 	}
 
-	u := db.GetUser(tokens[token])
+	u := db.GetUser(OwnerToken(token))
 	if u == nil { ko(w); return }
 
 	w.Write([]byte(strconv.Itoa(int(u.Id))+"\n"+u.Name+"\n"+u.Email))
@@ -286,15 +294,14 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// Data init
-	services = map[string]*Service{}
 	utokens = map[int32][]Token{}
 	tokens = map[string]int32{}
 	timeouts = map[int64][]string{}
+	ServiceMode = Manual
 
 	go ProcessMsg()
 	go Timeouts()
 
-	// db requires services to be  created
 	db = NewDatabase()
 
 	// Auth website

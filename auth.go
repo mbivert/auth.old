@@ -25,7 +25,7 @@ func sendEmail(to, subject, msg string) error {
 }
 
 func sendToken(email string, token *Token) error {
-	s := services[token.Key]
+	s := db.GetService2(token.Key)
 
 	err := sendEmail(email, "Token for "+s.Name,
 		"Hi there,\r\n"+
@@ -123,19 +123,39 @@ func AddService(name, url, address, email string) (string, error) {
 		return "", errors.New("")
 	}
 
-	s := Service{ -1, name, url, randomString(64), address, email }
+	s := Service{ -1, name, url, randomString(64), false, address, email }
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}
 
-	services[s.Key] = &s
+	switch ServiceMode {
+	case Automatic:
+		db.SetMode(s.Id, true)
+		return s.Key, nil
+	case Manual:
+		SendAdmin(&s)
+		return "ok", nil
+	case Disabled:
+		return "", errors.New("No dock available")
+	}
 
-	return s.Key, nil
+	return "", nil
 }
 
 func CheckService(key, address string) bool {
 	s := services[key]
-	if s == nil { return false }
+	if s == nil  { return false }
 
-	return s.Address == address
+	return s.Address == address && s.Mode
+}
+
+func SendAdmin(s *Service) {
+	for _, to := range db.GetAdmMail() {
+		err := sendEmail(to, "New Service "+s.Name,
+			"Hi there,\r\n"+
+			s.Name + " ("+s.Address+", "+s.Url+") asks for landing.")
+		if err != nil {
+			LogError(err)
+		}
+	}
 }
