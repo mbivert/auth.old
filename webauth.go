@@ -148,12 +148,25 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		ko(w); return
 	}
 
-	if r.FormValue("action") == "enable" {
+	switch r.FormValue("action") {
+	case "enable":
 		id, _ := strconv.Atoi(r.FormValue("id"))
 		db.SetMode(int32(id), true)
-	} else if r.FormValue("action") == "disable" {
+	case "disable":
 		id, _ := strconv.Atoi(r.FormValue("id"))
 		db.SetMode(int32(id), false)
+	case "add":
+		_, err := AddService(r.FormValue("name"), r.FormValue("url"),
+			r.FormValue("address"), r.FormValue("email"))
+		// XXX makes sense to enable service too
+		if err != nil { LogHttp(w, err); return }
+	case "mode-auto":
+		ServiceMode = Automatic
+		SendAdmin("[AAS] Automatic mode enabled", "Hope you're debugging.")
+	case "mode-manual":
+		ServiceMode = Manual
+	case "mode-disabled":
+		ServiceMode = Disabled
 	}
 
 	writeFiles(w, "templates/header.html", "templates/navbar3.html")

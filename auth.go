@@ -123,23 +123,25 @@ func AddService(name, url, address, email string) (string, error) {
 		return "", errors.New("")
 	}
 
+	if ServiceMode == Disabled { return "ko", nil }
+
 	s := Service{ -1, name, url, randomString(64), false, address, email }
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}
 
-	switch ServiceMode {
-	case Automatic:
+	if ServiceMode == Automatic {
 		db.SetMode(s.Id, true)
 		return s.Key, nil
-	case Manual:
-		SendAdmin(&s)
-		return "ok", nil
-	case Disabled:
-		return "", errors.New("No dock available")
 	}
 
-	return "", nil
+	// Manual
+	SendAdmin("New Service "+s.Name,
+			"Hi there,\r\n"+
+			s.Name + " ("+s.Address+", "+s.Url+") asks for landing.")
+
+	return "ok", nil
+
 }
 
 func CheckService(key, address string) bool {
@@ -149,11 +151,9 @@ func CheckService(key, address string) bool {
 	return s.Address == address && s.Mode
 }
 
-func SendAdmin(s *Service) {
+func SendAdmin(subject, msg string) {
 	for _, to := range db.GetAdmMail() {
-		err := sendEmail(to, "New Service "+s.Name,
-			"Hi there,\r\n"+
-			s.Name + " ("+s.Address+", "+s.Url+") asks for landing.")
+		err := sendEmail(to, subject, msg)
 		if err != nil {
 			LogError(err)
 		}

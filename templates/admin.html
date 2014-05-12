@@ -1,42 +1,119 @@
-<div class="container">
-	<table class="table table-hover">
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Address</th>
-				<th>Contact</th>
-				<th>Token</th>
-				<th>Toggle</th>
-			</tr>
-		</thead>
-		<tbody>
-			{{ range .Services }}
-			<tr>
-				<td><a href="{{ .Url }}">{{ .Name }}</a></td>
-				<td>{{ .Address }}</td>
-				<td><a href="mailto:{{ .Email }}">{{ .Email }}</a></td>
-				<td>{{ .Key }}</td>
-				<td>
-				{{ if .Mode }}
-					<form action="/admin/" method="post">
-						<input type="hidden" name="id" value="{{ .Id }}" />
-						<button type="submit" class="btn btn-default btn-sm"
-								name="action" value="disable">
-							<span class="glyphicon glyphicon-minus"></span>
-						</button>
-					</form>
-				{{ else }}
-					<form action="/admin/" method="post">
-						<input type="hidden" name="id" value="{{ .Id }}" />
-						<button type="submit" class="btn btn-default btn-sm"
-								name="action" value="enable">
-							<span class="glyphicon glyphicon-plus"></span>
-						</button>
-					</form>
+<div class="container text-center">
+<ul class="nav nav-tabs" id="tabs">
+	<li class="active"><a href="#services" data-toggle="tab">Services</a></li>
+	<li><a href="#newservice" data-toggle="tab">New service</a></li>
+	<li><a href="#setmode" data-toggle="tab">Set mode</a></li>
+</ul>
+
+<div class="tab-content">
+	<div class="tab-pane fade in active text-left" id="services">
+		<table class="table table-hover">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Address</th>
+					<th>Contact</th>
+					<th>Key</th>
+					<th>Toggle</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{ range .Services }}
+				<tr>
+					<td><a href="{{ .Url }}">{{ .Name }}</a></td>
+					<td>{{ .Address }}</td>
+					<td><a href="mailto:{{ .Email }}">{{ .Email }}</a></td>
+					<td>{{ .Key }}</td>
+					<td>
+					{{ if .Mode }}
+						<form action="/admin/" method="post">
+							<input type="hidden" name="id" value="{{ .Id }}" />
+							<button type="submit" class="btn btn-default btn-sm"
+									name="action" value="disable">
+								<span class="glyphicon glyphicon-minus"></span>
+							</button>
+						</form>
+					{{ else }}
+						<form action="/admin/" method="post">
+							<input type="hidden" name="id" value="{{ .Id }}" />
+							<button type="submit" class="btn btn-default btn-sm"
+									name="action" value="enable">
+								<span class="glyphicon glyphicon-plus"></span>
+							</button>
+						</form>
+					{{ end }}
+					</td>
+				</tr>
 				{{ end }}
-				</td>
-			</tr>
-			{{ end }}
-		</tbody>
-	</table>
+			</tbody>
+		</table>
+	</div>
+	<div class="tab-pane fade" id="newservice">
+		<form action="/admin/" method="post">
+			<table class="table table-hover text-left">
+				<tbody>
+					<tr class="input-services">
+						<td><input name="name" type="text" placeholder="Name" /></td>
+						<td><input name="url" type="text" placeholder="URL" /></td>
+						<td><input name="address" type="text" placeholder="Address (IP)" /></td>
+						<td><input name="email" type="text" placeholder="Contact (email)" /></td>
+					</tr>
+				</tbody>
+			</table>
+			<button type="submit" class="btn btn-success btn-sm"
+				name="action" value="add">
+					Add!
+			</button>
+		</form>
+	</div>
+	<div class="tab-pane fade text-center" id="setmode">
+		<form action="/admin/" method="post">
+			<table class="table table-hover">
+				<tbody>
+					<tr>
+						<td>
+							<button class="btn btn-default btn-block" name="action"
+								value="mode-auto" type="submit">Automatic</button>
+						</td>
+						<td class="text-left">
+							Services are automatically registred and enabled
+						</td>
+					<tr>
+						<td>
+							<button class="btn btn-default btn-block" name="action"
+								value="mode-manual" type="submit">Manual</button>
+						</td>
+						<td class="text-left">
+							Services are registred but not enabled.
+							Email will be sent to alert administrator so that they
+							can approve the registration.
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<button class="btn btn-default btn-block" name="action"
+								value="mode-disabled" type="submit">Disabled</button>
+						</td>
+						<td class="text-left">
+							Services can only be manually registred by administrator.
+						</td>
+					</tr>
+					</tr>
+				</tbody>
+			</table>
+		</form>
+		<p class="text-left alert alert-warning">
+			Be carefull when changing this setting. Admin will be sent
+			an email when <b>Automatic</b> mode is enabled.
+		</p>
+	</div>
+
+	<script>
+		$(function() {
+			$('#tabs a:first').tab('show')
+		})
+	</script>
+
+</div>
+
 </div>
