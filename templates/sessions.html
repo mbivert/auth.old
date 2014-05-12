@@ -1,0 +1,29 @@
+<div class="container">
+<table class="table table-hover">
+	<thead>
+		<tr>
+			<th>Service</th>
+			<th>Token</th>
+			<th>Remove</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{ $t := .Tokens }}
+		{{ range $t }}
+		{{ $s := GetService .Key }}
+		<tr>
+			<td><a href="{{ $s.Url }}">{{ $s.Name }}</a></td>
+			<td>{{ .Token }}</td>
+			<td>
+			<form action="/sessions/" method="post">
+				<input type="hidden" name="token" value="{{ .Token }}" />
+				<button type="submit" class="btn btn-default btn-sm">
+					<span class="glyphicon glyphicon-remove"></span>
+				</button>
+			</form>
+			</td>
+		</tr>
+		{{ end }}
+	</tbody>
+</table>
+</div>
