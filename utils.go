@@ -4,8 +4,9 @@ import (
 	"github.com/gorilla/securecookie"
 	"io/ioutil"
 	"log"
-	"runtime"
 	"net/http"
+	"runtime"
+	"strings"
 )
 
 // LogError calls log.Printf on error, and adds location in source code
@@ -66,12 +67,12 @@ var s = securecookie.New(hashKey, blockKey)
 
 func SetToken(w http.ResponseWriter, token string) error {
 	encoded, err := s.Encode("auth-token", token)
-	if err != nil { return err }
+	if err != nil { return MkIErr(err) }
 
-	cookie := &http.Cookie{
-		Name:	"auth-token",
-		Value:	encoded,
-		Path:	"/",
+	cookie := &http.Cookie {
+		Name	:	"auth-token",
+		Value	:	encoded,
+		Path	:	"/",
 	}
 	http.SetCookie(w, cookie)
 
@@ -79,23 +80,15 @@ func SetToken(w http.ResponseWriter, token string) error {
 }
 
 func UnsetToken(w http.ResponseWriter) {
-	cookie := &http.Cookie{
-		Name:	"auth-token",
-		Value:	"",
-		Path:	"/",
-		MaxAge:	-1,
+	cookie := &http.Cookie {
+		Name	:	"auth-token",
+		Value	:	"",
+		Path	:	"/",
+		MaxAge	:	-1,
 	}
 	http.SetCookie(w, cookie)
 }
 
-func GetToken(r *http.Request) (token string, err error) {
-	cookie, err := r.Cookie("auth-token")
-	if err == nil {
-		err = s .Decode("auth-token", cookie.Value, &token)
-	}
-
-	return
-}
 
 func VerifyToken(r *http.Request) (token string, err error) {
 	cookie, err := r.Cookie("auth-token")
@@ -110,16 +103,26 @@ func VerifyToken(r *http.Request) (token string, err error) {
 	return token, nil
 }
 
-func GetNavbar(token string) string {
-	navbar := "templates/navbar.html"
-
-	// if connected
-	if CheckToken(token) {
-		navbar = "templates/navbar2.html"
-		if IsAdmin(token) {
-			navbar = "templates/navbar3.html"
-		}
+func SetInfo(w http.ResponseWriter, msg string) {
+	cookie := &http.Cookie {
+		Name	:	"auth-info",
+		Value	:	strings.Replace(msg, " ", "_", -1),
+		Path	:	"/",
 	}
-
-	return navbar
+	http.SetCookie(w, cookie)
 }
+
+func SetError(w http.ResponseWriter, err error) {
+	SetInfo(w, "Error: "+err.Error())
+}
+
+/*
+func UnsetInfo(w http.ResponseWriter) {
+	cookie := &http.Cookie {
+		Name	:	"auth-info",
+		Path	:	"/",
+		MaxAge	:	-1,
+	}
+	http.SetCookie(w, cookie)
+}
+*/

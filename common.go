@@ -64,7 +64,7 @@ var (
 	NeedName		= errors.New("Name is mandatory")
 	LongName		= errors.New("Name is too long (maxsize: "+
 						strconv.Itoa(LenToken-1)+")")
-	WrongName		= errors.New("Invalid characters in name (no whites, @)")
+	WrongName		= errors.New("Invalid characters in name (no whites or @)")
 
 	WrongUser		= errors.New("User name or password already in use")
 
@@ -72,4 +72,6 @@ var (
 
 	MouldyCookie	= errors.New("Mouldy Cookie, Sour Tea!")
 	NotAdminErr		= errors.New("Can't go there.")
+	SetCookieErr	= errors.New("Can't set cookie. (contact us)")
+	EmptyFieldsErr	= errors.New("void.")
 )

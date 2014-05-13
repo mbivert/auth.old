@@ -23,7 +23,7 @@ var ltmpl = template.Must(
 var stmpl = template.Must(
 	template.New("sessions.html").Funcs(template.FuncMap{
 		"GetService": func(key string) *Service {
-			return services[key]
+			return db.GetService2(key)
 		},
 	}).ParseFiles("templates/sessions.html"))
 
@@ -42,7 +42,7 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 	case "GET":
 		d := struct{ CaptchaId string }{captcha.New()}
 		if err := rtmpl.Execute(w, &d); err != nil {
-			LogHttp(w, err)
+			log.Println(err)
 		}
 	case "POST":
 		/*
@@ -53,14 +53,13 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 		*/
 
 		if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {
-			LogHttp(w, err)
+			SetError(w, err)
+			http.Redirect(w, r, "/register", http.StatusFound)
 			return
 		}
 
-		w.Write([]byte("<p>Check your email account, " +
-			`and <a href="/login">login</a>!</p>`))
-
-		//	http.Redirect(w, r, "/login", http.StatusFound)
+		SetInfo(w, "Check your email account!")
+		http.Redirect(w, r, "/login", http.StatusFound)
 	}
 }
 
@@ -69,7 +68,7 @@ func login(w http.ResponseWriter, r *http.Request, token string) {
 	case "GET":
 		d := struct{ CaptchaId string }{captcha.New()}
 		if err := ltmpl.Execute(w, &d); err != nil {
-			LogHttp(w, err)
+			log.Println(err)
 		}
 	case "POST":
 		/*
@@ -78,24 +77,18 @@ func login(w http.ResponseWriter, r *http.Request, token string) {
 				return
 			}
 		*/
-		token, err := Login(r.FormValue("login"))
-		if err != nil {
-			LogHttp(w, err)
+		if token, err := Login(r.FormValue("login")); err != nil {
+			SetError(w, err)
+		} else if token == "" {
+			SetInfo(w, "Check you email account!")
+		} else if err := SetToken(w, token); err != nil {
+			log.Println(err)
+			SetError(w, SetCookieErr)
+		} else {
+			http.Redirect(w, r, "/sessions", http.StatusFound)
 			return
 		}
-		if token == "" {
-			w.Write([]byte("<p>Check your email account, " +
-				`and <a href="/login">login</a>!</p>`))
-			return
-		}
-
-		err = SetToken(w, token)
-		if err != nil {
-			LogHttp(w, err)
-			return
-		}
-
-		http.Redirect(w, r, "/sessions", http.StatusFound)
+		http.Redirect(w, r, "/login", http.StatusFound)
 	}
 }
 
@@ -106,54 +99,50 @@ func logout(w http.ResponseWriter, r *http.Request, token string) {
 }
 
 func admin(w http.ResponseWriter, r *http.Request, token string) {
-	switch r.FormValue("action") {
-	case "enable":
-		id, _ := strconv.Atoi(r.FormValue("id"))
-		db.SetMode(int32(id), true)
-	case "disable":
-		id, _ := strconv.Atoi(r.FormValue("id"))
-		db.SetMode(int32(id), false)
-	case "add":
-		_, err := AddService(r.FormValue("name"), r.FormValue("url"),
-			r.FormValue("address"), r.FormValue("email"))
-		// XXX makes sense to enable service too
-		if err != nil {
-			LogHttp(w, err)
-			return
+	if r.Method == "POST" {
+		switch r.FormValue("action") {
+		case "enable":
+			id, _ := strconv.Atoi(r.FormValue("id"))
+			db.SetMode(int32(id), true)
+		case "disable":
+			id, _ := strconv.Atoi(r.FormValue("id"))
+			db.SetMode(int32(id), false)
+		case "add":
+			_, err := AddService(r.FormValue("name"), r.FormValue("url"),
+				r.FormValue("address"), r.FormValue("email"))
+			// XXX makes sense to enable service here too
+			if err != nil {
+				SetError(w, err)
+			}
+		case "mode-auto":
+			ServiceMode = Automatic
+			SendAdmin("[AAS] Automatic mode enabled", "Hope you're debugging.")
+		case "mode-manual":
+			ServiceMode = Manual
+		case "mode-disabled":
+			ServiceMode = Disabled
 		}
-	case "mode-auto":
-		ServiceMode = Automatic
-		SendAdmin("[AAS] Automatic mode enabled", "Hope you're debugging.")
-	case "mode-manual":
-		ServiceMode = Manual
-	case "mode-disabled":
-		ServiceMode = Disabled
+		http.Redirect(w, r, "/admin", http.StatusFound)
 	}
 
 	d := struct {
 		Services map[string]*Service
-	}{services}
+	}{ services }
 
 	if err := atmpl.Execute(w, &d); err != nil {
-		LogHttp(w, err)
-		return
+		log.Println(err)
 	}
 }
 
 func sessions(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		toks := AllTokens(token)
-
-		writeFiles(w, "templates/header.html", GetNavbar(token))
-		d := struct{ Tokens []Token }{toks}
+		d := struct{ Tokens []Token }{ AllTokens(token) }
 		if err := stmpl.Execute(w, &d); err != nil {
-			LogHttp(w, err)
-			return
+			log.Println(err)
 		}
 	case "POST":
 		todel := r.FormValue("token")
-
 		if OwnerToken(todel) == OwnerToken(token) {
 			RemoveToken(todel)
 		}
@@ -189,21 +178,22 @@ func auth(w http.ResponseWriter, r *http.Request) {
 		// Verify token is valid
 		var err error
 		if token, err = VerifyToken(r); err != nil {
-			LogHttp(w, err)
-			return
+			SetError(w, err)
+			http.Redirect(w, r, "/", http.StatusFound)
 		}
 
 		// Check permission
 		if f == "admin" && !IsAdmin(token) {
-			LogHttp(w, NotAdminErr)
-			return
+			SetError(w, NotAdminErr)
+			http.Redirect(w, r, "/", http.StatusFound)
 		}
 
 		// Generate a new token
 		token = UpdateToken(token)
 		if err := SetToken(w, token); err != nil {
-			LogHttp(w, err)
-			return
+			log.Println(err)
+			SetError(w, SetCookieErr)
+			http.Redirect(w, r, "/", http.StatusFound)
 		}
 	}
 
@@ -213,7 +203,9 @@ func auth(w http.ResponseWriter, r *http.Request) {
 			Connected: token != "",
 			Admin:     IsAdmin(token),
 		}
-		ntmpl.Execute(w, &d)
+		if err := ntmpl.Execute(w, &d); err != nil {
+			log.Println(err)
+		}
 	}
 
 	authfuncs[f](w, r, token)
@@ -268,7 +260,7 @@ func login2(w http.ResponseWriter, r *http.Request) {
 		if u, err := db.GetUser2(login); err != nil {
 			ko(w)
 		} else {
-			NewToken(u.Id, services[r.FormValue("key")].Key)
+			NewToken(u.Id, db.GetService2(r.FormValue("key")).Key)
 			w.Write([]byte("new"))
 		}
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"strings"
 	"net/smtp"
 	"log"
@@ -120,7 +119,7 @@ func IsAdmin(token string) bool {
 
 func AddService(name, url, address, email string) (string, error) {
 	if name == "" || url == "" {
-		return "", errors.New("")
+		return "", EmptyFieldsErr
 	}
 
 	if ServiceMode == Disabled { return "ko", nil }
@@ -145,7 +144,7 @@ func AddService(name, url, address, email string) (string, error) {
 }
 
 func CheckService(key, address string) bool {
-	s := services[key]
+	s := db.GetService2(key)
 	if s == nil  { return false }
 
 	return s.Address == address && s.Mode
