@@ -27,28 +27,18 @@ type Database struct {
 }
 
 // XXX secure connection
-func NewDatabase() (db *Database) {
+func NewDatabase() (*Database, error) {
 	tmp, err := sql.Open("postgres",
 		"dbname=auth user=auth host=localhost sslmode=disable")
-	if err != nil {
-		LogFatal(err)
-	} else {
-		db = &Database{ tmp }
-		db.Init()
-	}
+	if err != nil { return nil, MkIErr(err) }
 
-	return
+	db = &Database{ tmp }
+
+	return db, db.Init()
 }
 
-func (db *Database) createFatal(descr string) {
-	_, err := db.Query(descr)
-	if err != nil {
-		LogFatal(err)
-	}
-}
-
-func (db *Database) createTables() {
-	db.createFatal(`CREATE TABLE IF NOT EXISTS
+func (db *Database) createTables() error {
+	if _, err := db.Query(`CREATE TABLE IF NOT EXISTS
 		users(
 			id						SERIAL,
 			name		TEXT		UNIQUE,
@@ -56,9 +46,9 @@ func (db *Database) createTables() {
 			admin		BOOLEAN,
 			PRIMARY KEY ("id")
 		)
-	`)
+	`); err != nil { return MkIErr(err) }
 
-	db.createFatal(`CREATE TABLE IF NOT EXISTS
+	if _, err := db.Query(`CREATE TABLE IF NOT EXISTS
 		services(
 			id						SERIAL,
 			name		TEXT		UNIQUE,
@@ -69,35 +59,37 @@ func (db *Database) createTables() {
 			email		TEXT,
 			PRIMARY KEY ("id")
 		)
-	`)
+	`); err != nil { return MkIErr(err) }
+
+	return nil
 }
 
-func (db *Database) createAdmin() {
-	if db.GetUser(1) == nil {
-		if err := db.AddUser(&Admin); err != nil {
-			LogFatal(err)
-		}
+func (db *Database) createAdmin() error {
+	if u, err := db.GetUser(1); err != nil {
+		return db.AddUser(&Admin)
 	} else {
-		Admin = *db.GetUser(1)
+		Admin = *u
 	}
+
+	return nil
 }
 
-func (db *Database) createAuth() {
-	if db.GetService(1) == nil {
-		if err := db.AddService(&Auth); err != nil {
-			LogFatal(err)
-		}
+func (db *Database) createAuth() error {
+	if s, err := db.GetService(1); err != nil {
+		return db.AddService(&Auth)
 	} else {
-		Auth = *db.GetService(1)
+		Auth = *s
 	}
+
+	return nil
 }
 
-func (db *Database) loadServices() {
+func (db *Database) loadServices() error {
 	rows, err := db.Query(`
 		SELECT id, name, url, key, mode, address, email
 		FROM services`)
 	if err != nil {
-		LogFatal(err)
+		return MkIErr(err)
 	}
 
 	for rows.Next() {
@@ -106,57 +98,59 @@ func (db *Database) loadServices() {
 		services[s.Key] = &s
 	}
 
+	return nil
 }
 
-func (db *Database) Init() {
+func (db *Database) Init() error {
 	services = map[string]*Service{}
 
-	db.createTables()
-	db.createAdmin()
-	db.createAuth()
+	if err := db.createTables(); err != nil { return err }
+	if err := db.createAdmin(); err != nil { return err }
+	if err := db.createAuth(); err != nil { return err }
 
-	db.loadServices()
+	return db.loadServices()
 }
 
 // Users
 func (db *Database) AddUser(u *User) error {
-	return db.QueryRow(`INSERT INTO
+	if err := db.QueryRow(`INSERT INTO
 		users(name, email, admin)
 		VALUES($1, $2, $3)
-		RETURNING id`, u.Name, u.Email, u.Admin).Scan(&u.Id)
-}
-
-func (db *Database) GetUser(id int32) *User {
-	var u User
-
-	err := db.QueryRow(`
-		SELECT id, name, email, admin
-		FROM users
-		WHERE id = $1`, id).Scan(&u.Id, &u.Name, &u.Email, &u.Admin)
-
-	if err != nil {
-		LogError(err)
-		return nil
+		RETURNING id`, u.Name,
+			u.Email, u.Admin).Scan(&u.Id); err != nil {
+		return MkIErr(err)
 	}
 
-	return &u
+	return nil
 }
 
-func (db *Database) GetUser2(login string) *User {
+func (db *Database) GetUser(id int32) (*User, error) {
 	var u User
 
-	err := db.QueryRow(`
+	if err := db.QueryRow(`
+		SELECT id, name, email, admin
+		FROM users
+		WHERE id = $1`, id).Scan(&u.Id, &u.Name,
+			&u.Email, &u.Admin); err != nil {
+		return nil, MkIErr(err)
+	}
+
+	return &u, nil
+}
+
+func (db *Database) GetUser2(login string) (*User, error) {
+	var u User
+
+	if err := db.QueryRow(`
 		SELECT id, name, email, admin
 		FROM users
 		WHERE	name	= $1
-		OR		email	= $1`, login).Scan(&u.Id, &u.Name, &u.Email, &u.Admin)
-
-	if err != nil {
-		LogError(err)
-		return nil
+		OR		email	= $1`, login).Scan(&u.Id,
+			&u.Name, &u.Email, &u.Admin); err != nil {
+		return nil, MkIErr(err)
 	}
 
-	return &u
+	return &u, nil
 }
 
 func (db *Database) GetEmail(name string) (email string) {
@@ -176,14 +170,14 @@ func (db *Database) IsAdmin(id int32) bool {
 	return err == nil
 }
 
-func (db *Database) GetAdmMail() (emails []string) {
+func (db *Database) GetAdminMail() ([]string, error) {
+	var emails []string
+
 	rows, err := db.Query(`SELECT email
 		FROM users
 	WHERE admin = true`)
-	if err != nil {
-		LogError(err)
-		return
-	}
+
+	if err != nil { return nil, MkIErr(err) }
 
 	for rows.Next() {
 		var email string
@@ -191,7 +185,7 @@ func (db *Database) GetAdmMail() (emails []string) {
 		emails = append(emails, email)
 	}
 
-	return
+	return emails, nil
 }
 
 //	DelUser()
@@ -205,15 +199,14 @@ func (db *Database) AddService(s *Service) error {
 		VALUES($1, $2, $3, $4, $5, $6)
 		RETURNING id`, s.Name, s.Url, s.Key, s.Mode, s.Address, s.Email).Scan(&s.Id)
 
-	if err != nil {		return err
-	}
+	if err != nil {	return MkIErr(err) }
 
 	services[s.Key] = s
 
 	return nil
 }
 
-func (db *Database) GetService(id int32) *Service {
+func (db *Database) GetService(id int32) (*Service, error) {
 	var s Service
 
 	err := db.QueryRow(`
@@ -222,33 +215,30 @@ func (db *Database) GetService(id int32) *Service {
 		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url,
 			&s.Key, &s.Mode, &s.Address, &s.Email)
 
-	if err != nil {
-		LogError(err)
-		return nil
-	}
+	if err != nil { return nil, MkIErr(err) }
 
-	return &s
+	return &s, nil
 }
 
 func (db *Database) GetService2(key string) *Service {
 	return services[key]
 }
 
-func (db *Database) SetMode(id int32, on bool) {
+func (db *Database) SetMode(id int32, on bool) error {
 	var key string
 
-	if id == Auth.Id { return }
+	if id == Auth.Id { return MkIErr(NonSense) }
 
 	err := db.QueryRow(`
 		UPDATE services
 			SET mode = $1
 			WHERE id = $2
 		RETURNING key`, on, id).Scan(&key)
-	if err != nil {
-		LogError(err)
-	} else {
-		services[key].Mode = on
-	}
+	if err != nil { return MkIErr(err) }
+
+	services[key].Mode = on
+
+	return nil
 }
 
 //	DelService()

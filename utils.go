@@ -97,6 +97,19 @@ func GetToken(r *http.Request) (token string, err error) {
 	return
 }
 
+func VerifyToken(r *http.Request) (token string, err error) {
+	cookie, err := r.Cookie("auth-token")
+	if err == nil { 
+		err = s.Decode("auth-token", cookie.Value, &token)
+	}
+
+	if err != nil || !CheckToken(token) {
+		return "", MouldyCookie
+	}
+
+	return token, nil
+}
+
 func GetNavbar(token string) string {
 	navbar := "templates/navbar.html"
 

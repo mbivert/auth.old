@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"net/smtp"
+	"log"
 )
 
 // sendEmail send an email to a user.
@@ -18,10 +19,12 @@ func sendEmail(to, subject, msg string) error {
 
 	auth := smtp.PlainAuth("", from, passwd, "smtp.gmail.com")
 
-	err := smtp.SendMail("smtp.gmail.com:587", auth, from,
-		[]string{to},[]byte(body))
+	if err := smtp.SendMail("smtp.gmail.com:587", auth, from,
+			[]string{to},[]byte(body)); err != nil {
+		return MkIErr(err)
+	}
 
-	return err
+	return nil
 }
 
 func sendToken(email string, token *Token) error {
@@ -30,17 +33,17 @@ func sendToken(email string, token *Token) error {
 	err := sendEmail(email, "Token for "+s.Name,
 		"Hi there,\r\n"+
 		"Here is your token for "+s.Name+" ("+s.Url+")"+": "+token.Token)
-	return err
+
+	if err != nil { log.Println(err); return SMTPErr }
+
+	return nil
 }
 
 func checkName(name string) error {
 	switch {
-	case name == "":
-		return errors.New("Name is mandatory")
-	case len(name) >= LenToken:
-		return errors.New("Name too long")
-	case strings.Contains(name, "@"):
-		return errors.New("Name is not an email (@ forbidden)")
+	case name == "":							return NeedName
+	case len(name) >= LenToken:					return LongName
+	case strings.Contains(name, "@ \t\n\r"):	return WrongName
 	}
 
 	return nil
@@ -48,12 +51,9 @@ func checkName(name string) error {
 
 func checkEmail(email string) error {
 	switch {
-	case email == "":
-		return errors.New("Email is mandatory")
-	case len(email) >= LenToken:
-		return errors.New("Email too long")
-	case !strings.Contains(email, "@"):
-		return errors.New("Wrong email address format")
+	case email == "":						return NeedEmail
+	case len(email) >= LenToken:			return LongEmail
+	case !strings.Contains(email, "@"):		return WrongEmail
 	}
 
 	return nil
@@ -79,29 +79,29 @@ func Register(name, email string) error {
 	u := User{ -1, name, email, false }
 
 	if err := db.AddUser(&u); err != nil {
-		return err
+		log.Println(err)
+		return WrongUser
 	}
 
-	token := NewToken(u.Id, Auth.Key)
-
-	return sendToken(email, token)
+	return sendToken(email, NewToken(u.Id, Auth.Key))
 }
 
 func Login(login string) (string, error) {
 	if isToken(login) {
 		ntoken := UpdateToken(login)
 		if ntoken == "" {
-			return "", errors.New("Wrong Token")
+			return "", WrongToken
 		}
 		return ntoken, nil
 	}
 
-	u := db.GetUser2(login)
-	if u == nil { return "", errors.New("Wrong name/email") }
+	u, err := db.GetUser2(login)
+	if err != nil {
+		log.Println(err)
+		return "", WrongLogin
+	}
 
-	token := NewToken(u.Id, Auth.Key)
-
-	return "", sendToken(u.Email, token)
+	return "", sendToken(u.Email, NewToken(u.Id, Auth.Key))
 }
 
 /*func LoginPassword() {
@@ -152,10 +152,14 @@ func CheckService(key, address string) bool {
 }
 
 func SendAdmin(subject, msg string) {
-	for _, to := range db.GetAdmMail() {
-		err := sendEmail(to, subject, msg)
-		if err != nil {
-			LogError(err)
+	if emails, err := db.GetAdminMail(); err != nil {
+		log.Println(err)
+		return
+	} else {
+		for _, to := range emails {
+			if err := sendEmail(to, subject, msg); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }

@@ -18,9 +18,9 @@ type Token struct {
 	Token		string
 }
 
-var	utokens		map[int32][]Token
-var	tokens		map[string]int32
-var timeouts	map[int64][]string
+var	utokens		=	map[int32][]Token{}
+var	tokens		=	map[string]int32{}
+var timeouts	=	map[int64][]string{}
 
 var chanmsg		chan Msg
 

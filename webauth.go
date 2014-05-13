@@ -1,153 +1,111 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"github.com/dchest/captcha"
 	"html/template"
 	"log"
-	"net/http"
 	"math/rand"
-	"time"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var port = flag.String("port", "8080", "Listening HTTP port")
 
 var rtmpl = template.Must(
 	template.New("register.html").ParseFiles("templates/register.html"))
+
 var ltmpl = template.Must(
 	template.New("login.html").ParseFiles("templates/login.html"))
+
 var stmpl = template.Must(
-	template.New("sessions.html").Funcs( template.FuncMap{
+	template.New("sessions.html").Funcs(template.FuncMap{
 		"GetService": func(key string) *Service {
 			return services[key]
 		},
-		}).ParseFiles("templates/sessions.html"))
+	}).ParseFiles("templates/sessions.html"))
+
 var atmpl = template.Must(
-	template.New("admin.html").Funcs( template.FuncMap{
-		"GetUser": func(id int32) *User {
-			return db.GetUser(id)
-		},
-		"GetService": func(key string) *Service {
-			return services[key]
-		},
-		}).ParseFiles("templates/admin.html"))
+	template.New("admin.html").ParseFiles("templates/admin.html"))
 
-func index(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		ko(w); return
-	}
+var ntmpl = template.Must(
+	template.New("navbar.html").ParseFiles("templates/navbar.html"))
 
-	token, _ := GetToken(r)	
-	writeFiles(w, "templates/header.html", GetNavbar(token),
-		"templates/index.html", "templates/footer.html")
+func index(w http.ResponseWriter, r *http.Request, token string) {
+	writeFiles(w, "templates/index.html")
 }
 
-func getRegister(w http.ResponseWriter, r *http.Request) {
-	token, _ := GetToken(r)	
-	writeFiles(w, "templates/header.html", GetNavbar(token))
-
-	d := struct { CaptchaId string }{ captcha.New() }
-
-	if err := rtmpl.Execute(w, &d); err != nil {
-		LogHttp(w, err); return
-	}
-
-	writeFiles(w, "templates/footer.html")
-}
-
-func postRegister(w http.ResponseWriter, r *http.Request) {
-/*
-	if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
-		w.Write([]byte("<p>Bad captcha; try again. </p>"))
-		return
-	}
-*/
-
-	if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {
-		LogHttp(w, err); return
-	}
-
-	w.Write([]byte("<p>Check your email account, "+
-		`and <a href="/login">login</a>!</p>`))
-}
-
-func register(w http.ResponseWriter, r *http.Request) {
+func register(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		getRegister(w, r)
+		d := struct{ CaptchaId string }{captcha.New()}
+		if err := rtmpl.Execute(w, &d); err != nil {
+			LogHttp(w, err)
+		}
 	case "POST":
-		postRegister(w, r)
-	default:
-		ko(w)
-	}
-}
+		/*
+			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
+				w.Write([]byte("<p>Bad captcha; try again. </p>"))
+				return
+			}
+		*/
 
-func getLogin(w http.ResponseWriter, r *http.Request) {
-	writeFiles(w, "templates/header.html", "templates/navbar.html")
+		if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {
+			LogHttp(w, err)
+			return
+		}
 
-	d := struct { CaptchaId string }{ captcha.New() }
-
-	if err := ltmpl.Execute(w, &d); err != nil {
-		LogHttp(w, err); return
-	}
-
-	writeFiles(w, "templates/footer.html")
-}
-
-func postLogin(w http.ResponseWriter, r *http.Request) {
-/*
-	if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
-		w.Write([]byte("<p>Bad captcha; try again. </p>"))
-		return
-	}
-*/
-	token, err := Login(r.FormValue("login"))
-	if err != nil {
-		LogHttp(w, err)
-		return
-	}
-	if token == "" {
-		w.Write([]byte("<p>Check your email account, "+
+		w.Write([]byte("<p>Check your email account, " +
 			`and <a href="/login">login</a>!</p>`))
-		return
+
+		//	http.Redirect(w, r, "/login", http.StatusFound)
 	}
-
-	err = SetToken(w, token)
-	if err != nil { LogHttp(w, err); return }
-
-	http.Redirect(w, r, "/sessions", http.StatusFound)
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func login(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		getLogin(w, r)
+		d := struct{ CaptchaId string }{captcha.New()}
+		if err := ltmpl.Execute(w, &d); err != nil {
+			LogHttp(w, err)
+		}
 	case "POST":
-		postLogin(w, r)
+		/*
+			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
+				w.Write([]byte("<p>Bad captcha; try again. </p>"))
+				return
+			}
+		*/
+		token, err := Login(r.FormValue("login"))
+		if err != nil {
+			LogHttp(w, err)
+			return
+		}
+		if token == "" {
+			w.Write([]byte("<p>Check your email account, " +
+				`and <a href="/login">login</a>!</p>`))
+			return
+		}
+
+		err = SetToken(w, token)
+		if err != nil {
+			LogHttp(w, err)
+			return
+		}
+
+		http.Redirect(w, r, "/sessions", http.StatusFound)
 	}
 }
 
-func logout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" { ko(w); return }
-
-	token, err := GetToken(r)
-	if err != nil { LogHttp(w, err); return }
-
+func logout(w http.ResponseWriter, r *http.Request, token string) {
 	Logout(token)
 	UnsetToken(w)
-
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func admin(w http.ResponseWriter, r *http.Request) {
-	token, err := GetToken(r)
-	if err != nil || !CheckToken(token) || !IsAdmin(token) {
-		ko(w); return
-	}
-
+func admin(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.FormValue("action") {
 	case "enable":
 		id, _ := strconv.Atoi(r.FormValue("id"))
@@ -159,7 +117,10 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		_, err := AddService(r.FormValue("name"), r.FormValue("url"),
 			r.FormValue("address"), r.FormValue("email"))
 		// XXX makes sense to enable service too
-		if err != nil { LogHttp(w, err); return }
+		if err != nil {
+			LogHttp(w, err)
+			return
+		}
 	case "mode-auto":
 		ServiceMode = Automatic
 		SendAdmin("[AAS] Automatic mode enabled", "Hope you're debugging.")
@@ -169,61 +130,96 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		ServiceMode = Disabled
 	}
 
-	writeFiles(w, "templates/header.html", "templates/navbar3.html")
-
-	// XXX make a copy of utokens/services
 	d := struct {
-		Users		map[int32][]Token
-		Services	map[string]*Service
-	}{ utokens, services }
+		Services map[string]*Service
+	}{services}
 
 	if err := atmpl.Execute(w, &d); err != nil {
-		LogHttp(w, err); return
+		LogHttp(w, err)
+		return
 	}
-
-	writeFiles(w, "templates/footer.html")
 }
 
-func getSettings(w http.ResponseWriter, r *http.Request, token string) {
-	toks := AllTokens(token)
-
-	writeFiles(w, "templates/header.html", GetNavbar(token))
-	d := struct { Tokens []Token }{ toks }
-	if err := stmpl.Execute(w, &d); err != nil {
-		LogHttp(w, err); return
-	}
-
-	writeFiles(w, "templates/footer.html")
-}
-
-func postSettings(w http.ResponseWriter, r *http.Request, token string) {
-	todel := r.FormValue("token")
-
-	if OwnerToken(todel) == OwnerToken(token) {
-		RemoveToken(todel)
-	}
-
-	http.Redirect(w, r, "/sessions", http.StatusFound)
-}
-
-func sessions(w http.ResponseWriter, r *http.Request) {
-	token, err := GetToken(r)
-	if err == nil {
-		if !CheckToken(token) {
-			err = errors.New("Wrong Token")
-		}
-	}
-	if err != nil { LogHttp(w, err); return }
-
-	ntoken := UpdateToken(token)
-	err = SetToken(w, ntoken)
-	if err != nil { LogHttp(w, err); return }
-
+func sessions(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		getSettings(w, r, ntoken)
+		toks := AllTokens(token)
+
+		writeFiles(w, "templates/header.html", GetNavbar(token))
+		d := struct{ Tokens []Token }{toks}
+		if err := stmpl.Execute(w, &d); err != nil {
+			LogHttp(w, err)
+			return
+		}
 	case "POST":
-		postSettings(w, r, ntoken)
+		todel := r.FormValue("token")
+
+		if OwnerToken(todel) == OwnerToken(token) {
+			RemoveToken(todel)
+		}
+
+		http.Redirect(w, r, "/sessions", http.StatusFound)
+	}
+}
+
+var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
+	"":         index,
+	"register": register,
+	//	"unregister"	:	unregister,
+	"login":    login,
+	"logout":   logout,
+	"admin":    admin,
+	"sessions": sessions,
+}
+
+func auth(w http.ResponseWriter, r *http.Request) {
+	var token string
+
+	f := r.URL.Path[1:]
+	if len(f) != 0 && f[len(f)-1] == '/' {
+		f = f[:len(f)-1]
+	}
+
+	if authfuncs[f] == nil {
+		return
+	}
+
+	// pages which requiring to be connected
+	if f == "unregister" || f == "logout" || f == "admin" || f == "sessions" {
+		// Verify token is valid
+		var err error
+		if token, err = VerifyToken(r); err != nil {
+			LogHttp(w, err)
+			return
+		}
+
+		// Check permission
+		if f == "admin" && !IsAdmin(token) {
+			LogHttp(w, NotAdminErr)
+			return
+		}
+
+		// Generate a new token
+		token = UpdateToken(token)
+		if err := SetToken(w, token); err != nil {
+			LogHttp(w, err)
+			return
+		}
+	}
+
+	if r.Method == "GET" && f != "logout" {
+		writeFiles(w, "templates/header.html")
+		d := struct{ Connected, Admin bool }{
+			Connected: token != "",
+			Admin:     IsAdmin(token),
+		}
+		ntmpl.Execute(w, &d)
+	}
+
+	authfuncs[f](w, r, token)
+
+	if r.Method == "GET" && f != "logout" {
+		writeFiles(w, "templates/footer.html")
 	}
 }
 
@@ -232,7 +228,10 @@ func discover(w http.ResponseWriter, r *http.Request) {
 	address, email := r.FormValue("address"), r.FormValue("email")
 
 	key, err := AddService(name, url, address, email)
-	if err != nil { ko(w); return }
+	if err != nil {
+		ko(w)
+		return
+	}
 
 	w.Write([]byte(key))
 }
@@ -245,21 +244,19 @@ func info(w http.ResponseWriter, r *http.Request) {
 	token, key := r.FormValue("token"), r.FormValue("key")
 
 	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
-		ko(w); return
+		ko(w)
+		return
 	}
 
-	u := db.GetUser(OwnerToken(token))
-	if u == nil { ko(w); return }
-
-	w.Write([]byte(strconv.Itoa(int(u.Id))+"\n"+u.Name+"\n"+u.Email))
+	if u, err := db.GetUser(OwnerToken(token)); err != nil {
+		ko(w)
+	} else {
+		w.Write([]byte(u.Name + "\n" + u.Email))
+	}
 }
 
-func alogin(w http.ResponseWriter, r *http.Request) {
-	login, key := r.FormValue("login"), r.FormValue("key")
-
-	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
-		ko(w); return
-	}
+func login2(w http.ResponseWriter, r *http.Request) {
+	login := r.FormValue("login")
 
 	if isToken(login) {
 		if CheckToken(login) {
@@ -268,23 +265,17 @@ func alogin(w http.ResponseWriter, r *http.Request) {
 			ko(w)
 		}
 	} else {
-		u := db.GetUser2(login)
-		if u == nil { ko(w) }
-		s := services[key]
-		if s == nil { ko(w); return }
-		NewToken(u.Id, s.Key)
-		w.Write([]byte("new"))
+		if u, err := db.GetUser2(login); err != nil {
+			ko(w)
+		} else {
+			NewToken(u.Id, services[r.FormValue("key")].Key)
+			w.Write([]byte("new"))
+		}
 	}
 }
 
 func chain(w http.ResponseWriter, r *http.Request) {
-	key, token := r.FormValue("key"), r.FormValue("token") 
-
-	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
-		ko(w); return
-	}
-
-	ntoken := UpdateToken(token)
+	ntoken := UpdateToken(r.FormValue("token"))
 	if ntoken != "" {
 		w.Write([]byte(ntoken))
 	} else {
@@ -292,47 +283,50 @@ func chain(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func alogout(w http.ResponseWriter, r *http.Request) {
-	key, token := r.FormValue("key"), r.FormValue("token") 
-
-	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
-		ko(w); return
-	}
-
-	RemoveToken(token)
+func logout2(w http.ResponseWriter, r *http.Request) {
+	RemoveToken(r.FormValue("token"))
 	ok(w)
+}
+
+var apifuncs = map[string]func(http.ResponseWriter, *http.Request){
+	"discover": discover,
+	"update":   update,
+	"info":     info,
+	"login":    login2,
+	"chain":    chain,
+	"logout":   logout2,
+}
+
+func api(w http.ResponseWriter, r *http.Request) {
+	f := r.URL.Path[5:]
+	log.Println(f)
+	if f != "discover" {
+		key := r.FormValue("key")
+		if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+			ko(w)
+			return
+		}
+	}
+	if apifuncs[f] != nil {
+		apifuncs[f](w, r)
+	}
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	// Data init
-	utokens = map[int32][]Token{}
-	tokens = map[string]int32{}
-	timeouts = map[int64][]string{}
-	ServiceMode = Manual
-
 	go ProcessMsg()
 	go Timeouts()
 
-	db = NewDatabase()
+	var err error
+	if db, err = NewDatabase(); err != nil {
+		log.Fatal(err)
+	}
 
-	// Auth website
-	http.HandleFunc("/", index)
-	http.HandleFunc("/register/", register)
-//	http.HandleFunc("/unregister/", unregister) // TODO
-	http.HandleFunc("/login/", login)
-	http.HandleFunc("/logout/", logout)
-	http.HandleFunc("/admin/", admin)
-	http.HandleFunc("/sessions/", sessions)
-
-	// API
-	http.HandleFunc("/api/discover", discover)
-	http.HandleFunc("/api/update", update)
-	http.HandleFunc("/api/info", info)
-	http.HandleFunc("/api/login", alogin)
-	http.HandleFunc("/api/chain", chain)
-	http.HandleFunc("/api/logout", alogout)
+	// handlers for both Auth website & API.
+	// XXX Auth website may use API (extended) with AJAX
+	http.HandleFunc("/", auth)
+	http.HandleFunc("/api/", api)
 
 	// Captchas
 	http.Handle("/captcha/",
@@ -343,6 +337,6 @@ func main() {
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir("./static/"))))
 
-	log.Println("Launching on http://localhost:"+*port)
+	log.Println("Launching on http://localhost:" + *port)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }

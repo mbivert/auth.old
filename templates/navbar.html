@@ -1,5 +1,15 @@
 <nav class="navbar navbar-default" role="navigation">
 	<a class="navbar-brand" href="/">Awesom's Auth Server</a>
-	<a class="navbar-brand" href="/register">Register</a>
-	<a class="navbar-brand" href="/login">Login</a>
+	{{ if .Connected }}
+		<a class="navbar-brand" href="/sessions">Sessions</a>
+	{{ else }}
+		<a class="navbar-brand" href="/register">Register</a>
+		<a class="navbar-brand" href="/login">Login</a>
+	{{ end }}
+	{{ if .Admin }}
+		<a class="navbar-brand" href="/admin">Admin</a>
+	{{ end }}
+	{{ if .Connected }}
+		<a class="navbar-brand" href="/logout">Logout</a>
+	{{ end }}
 </nav>
