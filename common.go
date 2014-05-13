@@ -54,22 +54,19 @@ func MkIErr(err error) *InternalError {
 }
 
 var (
-	WrongLogin		= errors.New("Wrong name/email")
-	WrongToken		= errors.New("Wrong Token")
+	NoSuchErr		= errors.New("No such name/email")
+	NoSuchTErr		= errors.New("No such token")
 	NonSense		= errors.New("This Sense Makes No Action")
-	NeedEmail		= errors.New("Email is mandatory")
-	LongEmail		= errors.New("Email is too long (maxsize: "+
+	NoEmailErr		= errors.New("Email is mandatory")
+	LongEmailErr	= errors.New("Email is too long (maxsize: "+
 						strconv.Itoa(LenToken-1)+")")
-	WrongEmail		= errors.New("Wrong Email format (you@provider)")
-	NeedName		= errors.New("Name is mandatory")
-	LongName		= errors.New("Name is too long (maxsize: "+
+	EmailFmtErr		= errors.New("Wrong Email format (you@provider)")
+	NoNameErr		= errors.New("Name is mandatory")
+	LongNameErr		= errors.New("Name is too long (maxsize: "+
 						strconv.Itoa(LenToken-1)+")")
-	WrongName		= errors.New("Invalid characters in name (no whites or @)")
-
+	NameFmtErr		= errors.New("Invalid characters in name (no whites or @)")
 	WrongUser		= errors.New("User name or password already in use")
-
 	SMTPErr			= errors.New("Email not send. Contact an admin.")
-
 	MouldyCookie	= errors.New("Mouldy Cookie, Sour Tea!")
 	NotAdminErr		= errors.New("Can't go there.")
 	SetCookieErr	= errors.New("Can't set cookie. (contact us)")

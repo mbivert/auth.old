@@ -40,9 +40,9 @@ func sendToken(email string, token *Token) error {
 
 func checkName(name string) error {
 	switch {
-	case name == "":							return NeedName
-	case len(name) >= LenToken:					return LongName
-	case strings.Contains(name, "@ \t\n\r"):	return WrongName
+	case name == "":							return NoNameErr
+	case len(name) >= LenToken:					return LongNameErr
+	case strings.Contains(name, "@ \t\n\r"):	return NameFmtErr
 	}
 
 	return nil
@@ -50,9 +50,9 @@ func checkName(name string) error {
 
 func checkEmail(email string) error {
 	switch {
-	case email == "":						return NeedEmail
-	case len(email) >= LenToken:			return LongEmail
-	case !strings.Contains(email, "@"):		return WrongEmail
+	case email == "":						return NoEmailErr
+	case len(email) >= LenToken:			return LongEmailErr
+	case !strings.Contains(email, "@"):		return EmailFmtErr
 	}
 
 	return nil
@@ -89,7 +89,7 @@ func Login(login string) (string, error) {
 	if isToken(login) {
 		ntoken := UpdateToken(login)
 		if ntoken == "" {
-			return "", WrongToken
+			return "", NoSuchTErr
 		}
 		return ntoken, nil
 	}
@@ -97,7 +97,7 @@ func Login(login string) (string, error) {
 	u, err := db.GetUser2(login)
 	if err != nil {
 		log.Println(err)
-		return "", WrongLogin
+		return "", NoSuchErr
 	}
 
 	return "", sendToken(u.Email, NewToken(u.Id, Auth.Key))

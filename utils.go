@@ -115,14 +115,3 @@ func SetInfo(w http.ResponseWriter, msg string) {
 func SetError(w http.ResponseWriter, err error) {
 	SetInfo(w, "Error: "+err.Error())
 }
-
-/*
-func UnsetInfo(w http.ResponseWriter) {
-	cookie := &http.Cookie {
-		Name	:	"auth-info",
-		Path	:	"/",
-		MaxAge	:	-1,
-	}
-	http.SetCookie(w, cookie)
-}
-*/
