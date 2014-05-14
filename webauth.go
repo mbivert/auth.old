@@ -170,6 +170,7 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authfuncs[f] == nil {
+		http.NotFound(w, r)
 		return
 	}
 
@@ -243,7 +244,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 	if u, err := db.GetUser(OwnerToken(token)); err != nil {
 		ko(w)
 	} else {
-		w.Write([]byte(u.Name + "\n" + u.Email))
+		w.Write([]byte(strconv.Itoa(int(u.Id)) + "\n" + u.Name + "\n" + u.Email))
 	}
 }
 
