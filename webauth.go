@@ -13,12 +13,16 @@ import (
 )
 
 var (
-	// set to false for debugging
-
 	port = flag.String("port", "8080", "Listening HTTP port")
 	verifcaptcha = flag.Bool("vc", true, "Verify captcha")
 	cert = flag.String("cert", "cert.pem", "x509 Certificate")
 	key = flag.String("key", "key.pem", "Private key to sign certificate")
+	smtps = flag.String("smtps", "smtp.gmail.com", "SMTP server")
+	smtpp = flag.String("smtpp", "587", "Port of SMTP server")
+	from = flag.String("from", "admin@whatev.er", "Email to send tokens from")
+	passwd = flag.String("passwd", "wrong password", "Password for email")
+	admemail = flag.String("email", "admin@whatev.er", "First administrator email")
+	aasurl = flag.String("url", "https://auth.awesom.eu", "URL for AAS")
 
 	rtmpl = template.Must(
 		template.New("register.html").ParseFiles("templates/register.html"))
@@ -168,6 +172,13 @@ var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
 	"sessions": sessions,
 }
 
+var mustauth = map[string]bool {
+	"unregister":true,
+	"logout":true,
+	"admin":true,
+	"sessions":true,
+}
+
 func auth(w http.ResponseWriter, r *http.Request) {
 	var token string
 
@@ -183,7 +194,7 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// pages which requiring to be connected
-	if f == "unregister" || f == "logout" || f == "admin" || f == "sessions" {
+	if mustauth[f] {
 		// Verify token is valid
 		var err error
 		if token, err = VerifyToken(r); err != nil {

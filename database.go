@@ -8,17 +8,17 @@ import (
 var Admin User = User {
 		Id		:		1,			// by convention
 		Name	:		"admin",
-		Email	:		"mathieu.root@gmail.com",
+		Email	:		*admemail,
 		Admin	:		true,
 }
 var Auth  Service = Service {
 		Id		:		1,			// by convention
 		Name	:		"AAS",
-		Url		:		"http://auth.awesom.eu",
+		Url		:		*aasurl,
 		Key		:		randomString(64),
 		Mode	:		true,
 		Address	:		"127.0.0.1",
-		Email	:		"mathieu.root@gmail.com",
+		Email	:		*admemail,
 }
 
 

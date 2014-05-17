@@ -10,15 +10,12 @@ import (
 // XXX use several SMTP according to the destination email
 // provider to speed things up.
 func sendEmail(to, subject, msg string) error {
-	from := "auth.newsome@gmail.com"
-	passwd := "awesom auth server"
-
 	body := "To: " + to + "\r\nSubject: " +
 		subject + "\r\n\r\n" + msg
 
-	auth := smtp.PlainAuth("", from, passwd, "smtp.gmail.com")
+	auth := smtp.PlainAuth("", *from, *passwd, *smtps)
 
-	if err := smtp.SendMail("smtp.gmail.com:587", auth, from,
+	if err := smtp.SendMail(*smtps+":"+*smtpp, auth, *from,
 			[]string{to},[]byte(body)); err != nil {
 		return MkIErr(err)
 	}
