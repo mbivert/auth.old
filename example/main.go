@@ -1,27 +1,105 @@
 package main
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"flag"
 	"github.com/gorilla/securecookie"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"html/template"
 )
 
-var port = flag.String("port", "8082", "Listening HTTP port")
+type Config struct{ URL, Key string }
+
+var (
+	port  = flag.String("port", "8082", "Listening HTTP port")
+	confd = "./conf/"
+	Conf   = map[string]Config{}
+	Client = &http.Client{}
+)
+
+func loadConfig(f string, certs *x509.CertPool) error {
+	name := path.Base(strings.TrimSuffix(f, ".conf"))
+
+	var c Config
+
+	content, err := ioutil.ReadFile(f)
+	if err != nil {
+		return err
+	}
+
+	for n, line := range bytes.Split(content, []byte("\n")) {
+		vals := bytes.Split(line, []byte("="))
+		// silently ignore bad lines.
+		if len(vals) != 2 { continue }
+
+		switch string(vals[0]) {
+		case "url":
+			c.URL = string(vals[1])
+		case "key":
+			c.Key = string(vals[1])
+		case "cert":
+			pem, err := ioutil.ReadFile(confd + "/" + string(vals[1]))
+			if err != nil {
+				return err
+			}
+			if !certs.AppendCertsFromPEM(pem) {
+				return errors.New(f + ":" + strconv.Itoa(n) + "can't add certificate")
+			}
+		default:
+			log.Println("Unknown field " + string(vals[0]) + " (=" + string(vals[1]) + ")")
+		}
+	}
+
+	if c.URL == "" {
+		return errors.New(f + ": missing url=")
+	}
+	if c.Key == "" {
+		return errors.New(f + ": missing key=")
+	}
+
+	Conf[name] = c
+
+	return nil
+}
 
 // -- Configuration
-const (
-	authserver = "http://localhost:8080/"
-	key        = "gY2kjVxPYQVKMwc9sap1pgfxpRiNucmShUftMCg2bwTtk5SJLyCZqZ4EWwhRWdkT"
-)
+func loadConfigs() {
+	// XXX in real life, worth keeping root certificates
+	// for auth server with real x509.
+	certs := x509.NewCertPool()
+	// load auth servers
+	fs, err := filepath.Glob(confd + "/*.conf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, f := range fs {
+		if err := loadConfig(f, certs); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// create client
+	Client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: certs,
+			},
+		},
+	}
+}
 
 // Helper to contact API
-func mkr(descr string) string {
-	resp, err := http.Get(authserver + "/api/" + descr + "&key=" + key)
+func mkr(a, descr string) string {
+	resp, err := Client.Get(Conf[a].URL + "/api/" + descr + "&key=" + Conf[a].Key)
 	if err != nil {
 		// XXX watch out, err may contain sensible data (key)
 		log.Println(err)
@@ -39,33 +117,34 @@ func mkr(descr string) string {
 }
 
 // API
-func login(login string) string {
-	return mkr("login?login=" + login)
+func login(a, login string) string {
+	return mkr(a, "login?login="+login)
 }
 
-func chain(token string) string {
-	return mkr("chain?token=" + token)
+func chain(a, token string) string {
+	return mkr(a, "chain?token="+token)
 }
 
 type AuthData struct {
-	Uid   int32
-	Name  string
-	Email string
+	Uid    int32
+	Name   string
+	Email  string
+	Server string
 }
 
-func info(token string) *AuthData {
-	res := strings.Split(mkr("info?token="+token), "\n")
+func info(a, token string) *AuthData {
+	res := strings.Split(mkr(a, "info?token="+token), "\n")
 
 	if uid, err := strconv.ParseInt(res[0], 10, 32); err == nil {
-		return &AuthData{int32(uid), res[1], res[2]}
+		return &AuthData{int32(uid), res[1], res[2], a}
 	}
 
 	// ko
 	return nil
 }
 
-func logout(token string) {
-	mkr("logout?token=" + token)
+func logout(a, token string) {
+	mkr(a, "logout?token="+token)
 }
 
 // Cookie management
@@ -78,10 +157,11 @@ var (
 
 func setToken(w http.ResponseWriter, token string, ad *AuthData) error {
 	value := map[string]interface{}{
-		"token"	:	token,
-		"uid"	:	ad.Uid,
-		"name"	:	ad.Name,
-		"email"	:	ad.Email,
+		"token":  token,
+		"uid":    ad.Uid,
+		"name":   ad.Name,
+		"email":  ad.Email,
+		"server": ad.Server,
 	}
 
 	if encoded, err := s.Encode(ctoken, value); err == nil {
@@ -103,7 +183,7 @@ func getToken(r *http.Request) (string, AuthData, error) {
 	if err != nil {
 		return "", AuthData{}, err
 	}
-	
+
 	v := map[string]interface{}{}
 	err = s.Decode(ctoken, cookie.Value, &v)
 
@@ -112,9 +192,10 @@ func getToken(r *http.Request) (string, AuthData, error) {
 	}
 
 	return v["token"].(string),
-		AuthData{	v["uid"].(int32),
-					v["name"].(string),
-					v["email"].(string),
+		AuthData{v["uid"].(int32),
+			v["name"].(string),
+			v["email"].(string),
+			v["server"].(string),
 		}, nil
 }
 
@@ -136,6 +217,11 @@ const srcForm = `
 	</head>
 	<body>
 		<form action="/" method="post">
+			<select name="server">
+			{{ range $i, $v := .Conf }}
+				<option value="{{ $i }}"> {{ $i }} ({{ $v.URL }}) </option>
+			{{ end }}
+			</select>
 			<input autocomplete="off" name="login"
 				type="text" class="form-control"
 				placeholder="Token, username or email" />
@@ -175,31 +261,34 @@ const srcUser = `
 	</body>
 </html>
 `
+
+var tmplForm = template.Must(template.New("form").Parse(srcForm))
 var tmplUser = template.Must(template.New("user").Parse(srcUser))
 
 func connect(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		l := r.FormValue("login")
-		res := login(l)
+		res := login(r.FormValue("server"), l)
 		if res == "ko" {
 			http.Error(w, "ko", http.StatusInternalServerError)
 		} else if res == "ok" {
-			if err := setToken(w, l, info(l)); err != nil {
+			if err := setToken(w, l, info(r.FormValue("server"), l)); err != nil {
 				log.Println(err)
 				http.Error(w, "ko", http.StatusInternalServerError)
 				return
 			}
-			log.Println("Connected.")
 		}
 		// new
 		http.Redirect(w, r, "/", http.StatusFound)
 	case "GET":
 		if token, ad, err := getToken(r); err != nil || token == "ko" {
-			w.Write([]byte(srcForm))
+			d := struct{ Conf map[string]Config }{Conf}
+			if err := tmplForm.Execute(w, &d); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 		} else {
-			log.Println(token)
-			token = chain(token)
+			token = chain(ad.Server, token)
 			if token != "ko" {
 				setToken(w, token, &ad)
 				if err := tmplUser.Execute(w, &ad); err != nil {
@@ -213,16 +302,18 @@ func connect(w http.ResponseWriter, r *http.Request) {
 }
 
 func leave(w http.ResponseWriter, r *http.Request) {
-	token, _, _ := getToken(r)
-	logout(token)
+	token, ad, _ := getToken(r)
+	logout(ad.Server, token)
 	unsetToken(w)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func main() {
+	loadConfigs()
+
 	http.HandleFunc("/", connect)
 	http.HandleFunc("/leave", leave)
 
-	log.Print("Launching on http://localhost:" + *port)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	log.Print("Launching on https://localhost:" + *port)
+	log.Fatal(http.ListenAndServeTLS(":"+*port, "cert.pem", "key.pem", nil))
 }
