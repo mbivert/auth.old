@@ -8,7 +8,7 @@
 	<p><img id="image" src="/captcha/{{.CaptchaId}}.png" alt="Captcha image"></p>
 	<p> (Reload for new captcha) </p>
 	<input type="hidden" name="captchaId" value="{{.CaptchaId}}" /><br>
-	<input type="text" name="captchasol" /><br />
+	<input type="text" name="captchaRes" /><br />
 	<input class="btn btn-success btn-lg" type="submit" value="Login" />
 	<script>
 		function setSrcQuery(e, q) {
