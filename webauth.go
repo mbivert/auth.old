@@ -12,26 +12,33 @@ import (
 	"time"
 )
 
-var port = flag.String("port", "8080", "Listening HTTP port")
+var (
+	// set to false for debugging
 
-var rtmpl = template.Must(
-	template.New("register.html").ParseFiles("templates/register.html"))
+	port = flag.String("port", "8080", "Listening HTTP port")
+	verifcaptcha = flag.Bool("vc", true, "Verify captcha")
+	cert = flag.String("cert", "cert.pem", "x509 Certificate")
+	key = flag.String("key", "key.pem", "Private key to sign certificate")
 
-var ltmpl = template.Must(
-	template.New("login.html").ParseFiles("templates/login.html"))
+	rtmpl = template.Must(
+		template.New("register.html").ParseFiles("templates/register.html"))
 
-var stmpl = template.Must(
-	template.New("sessions.html").Funcs(template.FuncMap{
-		"GetService": func(key string) *Service {
-			return db.GetService2(key)
-		},
-	}).ParseFiles("templates/sessions.html"))
+	ltmpl = template.Must(
+		template.New("login.html").ParseFiles("templates/login.html"))
 
-var atmpl = template.Must(
-	template.New("admin.html").ParseFiles("templates/admin.html"))
+	stmpl = template.Must(
+		template.New("sessions.html").Funcs(template.FuncMap{
+			"GetService": func(key string) *Service {
+				return db.GetService2(key)
+			},
+		}).ParseFiles("templates/sessions.html"))
 
-var ntmpl = template.Must(
-	template.New("navbar.html").ParseFiles("templates/navbar.html"))
+	atmpl = template.Must(
+		template.New("admin.html").ParseFiles("templates/admin.html"))
+
+	ntmpl = template.Must(
+		template.New("navbar.html").ParseFiles("templates/navbar.html"))
+)
 
 func index(w http.ResponseWriter, r *http.Request, token string) {
 	writeFiles(w, "templates/index.html")
@@ -45,12 +52,12 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 			log.Println(err)
 		}
 	case "POST":
-		/*
+		if *verifcaptcha {
 			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
 				w.Write([]byte("<p>Bad captcha; try again. </p>"))
 				return
 			}
-		*/
+		}
 
 		if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {
 			SetError(w, err)
@@ -71,12 +78,12 @@ func login(w http.ResponseWriter, r *http.Request, token string) {
 			log.Println(err)
 		}
 	case "POST":
-		/*
+		if *verifcaptcha {
 			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
 				w.Write([]byte("<p>Bad captcha; try again. </p>"))
 				return
 			}
-		*/
+		}
 		if token, err := Login(r.FormValue("login")); err != nil {
 			SetError(w, err)
 		} else if token == "" {
@@ -127,7 +134,7 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 
 	d := struct {
 		Services map[string]*Service
-	}{ services }
+	}{services}
 
 	if err := atmpl.Execute(w, &d); err != nil {
 		log.Println(err)
@@ -137,7 +144,7 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 func sessions(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		d := struct{ Tokens []Token }{ AllTokens(token) }
+		d := struct{ Tokens []Token }{AllTokens(token)}
 		if err := stmpl.Execute(w, &d); err != nil {
 			log.Println(err)
 		}
@@ -154,7 +161,7 @@ func sessions(w http.ResponseWriter, r *http.Request, token string) {
 var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
 	"":         index,
 	"register": register,
-	//	"unregister"	:	unregister,
+	//	"unregister":		unregister,
 	"login":    login,
 	"logout":   logout,
 	"admin":    admin,
@@ -164,7 +171,8 @@ var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
 func auth(w http.ResponseWriter, r *http.Request) {
 	var token string
 
-	f := r.URL.Path[1:]
+	f := r.URL.Path[1:] // skip '/'
+	// remove trailing '/' if any
 	if len(f) != 0 && f[len(f)-1] == '/' {
 		f = f[:len(f)-1]
 	}
@@ -291,8 +299,7 @@ var apifuncs = map[string]func(http.ResponseWriter, *http.Request){
 }
 
 func api(w http.ResponseWriter, r *http.Request) {
-	f := r.URL.Path[5:]
-	log.Println(f)
+	f := r.URL.Path[5:] // skip '/api/'
 	if f != "discover" {
 		key := r.FormValue("key")
 		if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
@@ -307,6 +314,7 @@ func api(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	flag.Parse()
 
 	go ProcessMsg()
 	go Timeouts()
@@ -316,7 +324,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// handlers for both Auth website & API.
+	// Handlers for website & API
 	// XXX Auth website may use API (extended) with AJAX
 	http.HandleFunc("/", auth)
 	http.HandleFunc("/api/", api)
@@ -330,6 +338,6 @@ func main() {
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir("./static/"))))
 
-	log.Println("Launching on http://localhost:" + *port)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	log.Println("Launching on https://localhost:" + *port)
+	log.Fatal(http.ListenAndServeTLS(":"+*port, *cert, *key, nil))
 }
