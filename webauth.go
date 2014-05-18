@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/dchest/captcha"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -15,11 +16,10 @@ import (
 var (
 	conf = flag.String("conf", "config.json", "Configuration file")
 
+	loginForm = []byte("")
+
 	rtmpl = template.Must(
 		template.New("register.html").ParseFiles("templates/register.html"))
-
-	ltmpl = template.Must(
-		template.New("login.html").ParseFiles("templates/login.html"))
 
 	stmpl = template.Must(
 		template.New("sessions.html").Funcs(template.FuncMap{
@@ -68,17 +68,8 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 func login(w http.ResponseWriter, r *http.Request, token string) {
 	switch r.Method {
 	case "GET":
-		d := struct{ CaptchaId string }{captcha.New()}
-		if err := ltmpl.Execute(w, &d); err != nil {
-			log.Println(err)
-		}
+		w.Write(loginForm)
 	case "POST":
-		if C.VerifyCaptcha {
-			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
-				w.Write([]byte("<p>Bad captcha; try again. </p>"))
-				return
-			}
-		}
 		if token, err := Login(r.FormValue("login")); err != nil {
 			SetError(w, err)
 		} else if token == "" {
@@ -330,6 +321,10 @@ func main() {
 	var err error
 	if db, err = NewDatabase(); err != nil {
 		log.Fatal(err)
+	}
+
+	if loginForm, err = ioutil.ReadFile("templates/login.html"); err != nil {
+		log.Println(err)
 	}
 
 	// Handlers for website & API
