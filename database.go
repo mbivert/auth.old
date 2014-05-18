@@ -3,7 +3,6 @@ package main
 import (
 	_ "github.com/lib/pq"
 	"database/sql"
-	"log"
 )
 
 // XXX the C.* here are useless as conf is not loaded...
@@ -113,9 +112,7 @@ func (db *Database) Init() error {
 	services = map[string]*Service{}
 
 	if err := db.createTables(); err != nil { return err }
-	log.Println(Admin)
 	if err := db.createAdmin(); err != nil { return err }
-	log.Println(Admin)
 	if err := db.createAuth(); err != nil { return err }
 
 	return db.loadServices()
