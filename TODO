@@ -1,0 +1,42 @@
+# Small steps
+By a semblance of order of importance:
+
+* Clean things (variable name, eventually use packages)
+* Avoid the double-captcha at login.
+* Avoid captcha in the general case. Two-steps login is already painful.
+* /api/update is not implemented.
+* /unregister is not implemented.
+* Use SSL to communicate with PostgreSQL (not important assuming isolated communication)
+* Maybe use different storage than PostgreSQL (keep reading why it may not be that good)
+
+# Heavy load
+## On Website and API
+To be seen in production, but one-time token should generate
+quite some traffic.
+
+Multiple auth servers could be launched, communicating to
+the same database, and sharing the same token cache.
+The cache may be implemented using [memcached](http://memcached.org/)
+or [groupcache](https://github.com/golang/groupcache)
+
+Balancing the load on the multiple auth servers can easily
+be done with [Nginx](http://nginx.org/en/docs/http/load_balancing.html).
+
+## On Database
+PostgreSQL already comes with some interesting
+[features](http://www.postgresql.org/docs/9.4/static/high-availability.html)
+which would help managing the load on the Database if any.
+
+## On SMTP
+For now, we use a single, external SMTP server (for developping).
+One should setup his own SMTP server in production.
+
+However, if needed, multiple SMTP server may be used, emails
+being dispatched following who they are sending to (eg. use
+gmail's SMTP to communicate with @gmail.com addresses).
+
+# Enforce chaining
+It might be good to enforce token chaining by services within
+the "protocol".
+This could easily be done by removing info, and having login
+returns those data.

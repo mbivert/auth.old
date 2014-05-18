@@ -1,0 +1,96 @@
+## API
+Current implementation don't care which HTTP method is used (GET/POST/WHATEVER).
+Also, the token/service association is *not* checked.
+
+The association key/IP address will be checked for every requests but
+discover.
+
+### Discover
+To register a new service:
+
+  /api/discover name=... url=... address=... email= 
+
+Arguments:
+
+* name : name of the service
+* url : url of the service
+* address : IP address of the service
+* email : who to contact (eg. to send the key)
+
+Returns:
+
+* a key identifying the service (Automatic mode only)
+* ok : service registered (Manual mode only)
+* ko : Wrong paramaters or Disable mode
+
+### Update (NOT IMPLEMENTED)
+Update the key of the service
+
+  /api/update key=...
+
+Argument:
+
+* key : current key
+
+Returns
+
+* new key
+* ko : wrong key
+
+### Info
+
+Retrieve info about the owner of a token:
+
+  /api/info key=... token=...
+
+Argument:
+
+* key : service key
+* token : token of the user
+
+Returns:
+
+* one per line and in this order
+    * id
+    * name
+    * email
+* ko : wrong key, wrong token)
+
+### Login
+Login a user:
+
+  /api/login key=... login=... 
+
+Arguments:
+
+* key : service key
+* login : either token, name or email
+
+Returns:
+
+* new : a new token has been generated for the name/email
+* ok : the token was a valid one (effective login)
+* ko : wrong key, wrong token, name, email
+
+### Chaining
+Chain a token (return a new token from a valid one)
+
+  /api/chain key=... token=...
+
+* key : service key
+* token : user token
+
+Returns:
+
+* a new token
+* ko : wrong key, wrong token
+
+### Logout
+Logout an user:
+
+  /api/logout key=... token=... 
+
+* key : service key
+* token : user token
+
+Returns nothing.

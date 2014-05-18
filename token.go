@@ -168,7 +168,7 @@ func Timeouts() {
 	}
 }
 
-// API
+// "API"
 func NewToken(uid int32, key string) *Token {
 	answer := make(chan string, 1)
 	chanmsg <- NewMsg{ uid, key, answer }
