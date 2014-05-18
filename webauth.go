@@ -163,6 +163,7 @@ var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
 	"sessions": sessions,
 }
 
+// pages which requires to be authenticated
 var mustauth = map[string]bool {
 	"unregister":true,
 	"logout":true,
@@ -184,27 +185,29 @@ func auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// pages which requiring to be connected
-	if mustauth[f] {
-		// Verify token is valid
-		var err error
-		if token, err = VerifyToken(r); err != nil {
-			SetError(w, err)
-			http.Redirect(w, r, "/", http.StatusFound)
-		}
+	// Verify token is valid
+	var err error
+	if token, err = VerifyToken(r); err != nil && mustauth[f] {
+		SetError(w, err)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
 
-		// Check permission
-		if f == "admin" && !IsAdmin(token) {
-			SetError(w, NotAdminErr)
-			http.Redirect(w, r, "/", http.StatusFound)
-		}
+	// Check permission
+	if f == "admin" && !IsAdmin(token) {
+		SetError(w, NotAdminErr)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
 
-		// Generate a new token
+	// Generate a new token if needed
+	if token != "" {
 		token = UpdateToken(token)
 		if err := SetToken(w, token); err != nil {
 			log.Println(err)
 			SetError(w, SetCookieErr)
 			http.Redirect(w, r, "/", http.StatusFound)
+			return
 		}
 	}
 
@@ -318,6 +321,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	flag.Parse()
 
+	// XXX do it before anything else.
 	LoadConfig(*conf)
 
 	go ProcessMsg()
