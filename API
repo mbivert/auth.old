@@ -1,11 +1,11 @@
-## API
+# API
 Current implementation don't care which HTTP method is used (GET/POST/WHATEVER).
 Also, the token/service association is *not* checked.
 
 The association key/IP address will be checked for every requests but
 discover.
 
-### Discover
+## Discover
 To register a new service:
 
   /api/discover name=... url=... address=... email= 
@@ -23,7 +23,7 @@ Returns:
 * ok : service registered (Manual mode only)
 * ko : Wrong paramaters or Disable mode
 
-### Update (NOT IMPLEMENTED)
+## Update (NOT IMPLEMENTED)
 Update the key of the service
 
   /api/update key=...
@@ -37,7 +37,7 @@ Returns
 * new key
 * ko : wrong key
 
-### Info
+## Info
 
 Retrieve info about the owner of a token:
 
@@ -56,7 +56,7 @@ Returns:
     * email
 * ko : wrong key, wrong token)
 
-### Login
+## Login
 Login a user:
 
   /api/login key=... login=... 
@@ -72,7 +72,7 @@ Returns:
 * ok : the token was a valid one (effective login)
 * ko : wrong key, wrong token, name, email
 
-### Chaining
+## Chaining
 Chain a token (return a new token from a valid one)
 
   /api/chain key=... token=...
@@ -85,7 +85,7 @@ Returns:
 * a new token
 * ko : wrong key, wrong token
 
-### Logout
+## Logout
 Logout an user:
 
   /api/logout key=... token=... 
