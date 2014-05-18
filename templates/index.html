@@ -1,171 +1,23 @@
-<!-- XXX set some slides on this -->
 <div class="container">
 <h1> Awesom Auth Server </h1>
 <p>
-	The <abbr title="Awesom Auth Server">AAS</abbr> allows
-	multiple services to share the same user base. Here's a quick
-	summary:
-	<ul>
-		<li> User need to have a valid email account </li>
-		<li>
-			AAS is <a href="http://passwordless.org">password-less</a>:
-			the user only have to remember its email password
-		</li>
-	</ul>
+	The <abbr title="Awesom Auth Server">AAS</abbr> is a 
+	<a href="http://passwordless.org">password-less</a> authentication
+	server. It allows multiple services to share the same user base. <br />
+	A service can easily authorize its user to use the authentication
+	server of their choice. <br />
 </p>
-
 <h1> Registration </h1>
-<img src="/static/imgs/registration.png" alt="registration" />
 <p>
-	<ol>
-		<li> User register to the AAS by providing
-			<ul>
-				<li> A nickname </li>
-				<li> A valid email address </li>
-			</ul>
-		</li>
-		<li> The AAS sends a verification email to the given address </li>
-		<li>
-			The user goes to the provided verification link to activate its
-			account
-		</li>
-		<li>
-			The AAS activate the account and login the user to its
-			settings panel
-		</li>
-	</ol>
+	To register, users need
+	<ul>
+		<li> A valid email address </li>
+		<li> A nickname </li>
+	</ul>
 </p>
-
 <h1> Login </h1>
-<img src="/static/imgs/login.png" alt="login" />
 <p>
-	<ol>
-		<li> A registered user ask the service to be connected </li>
-		<li> The service ask the AAS to generate a token for the given user </li>
-		<li> The AAS sends the user a token via email for this service </li>
-		<li> The user provide this token to the service </li>
-		<li>
-			The service check the token validity and keep user identity
-			somewhere (eg. cookies). The service may change the token
-			at each request, periodically, etc.
-		</li>
-	</ol>
+	To login, users need to have a token. If they don't,
+	they start by providing either their email or nickname.
+	An email with a token will be sent to this address.
 </p>
-
-<h1> Sessions </h1>
-<p>
-	The settings allows to user to:
-	<ul>
-		<li>
-			View his current sessions/tokens.
-			At least the token for the AAS should be displayed;
-		</li>
-		<li>
-			Eventually, termination sessions.
-		</li>
-	</ul>
-</p>
-
-<h1> Admin </h1>
-<p>
-	The administrator pages essentially allows to manage services:
-	<ul>
-		<li>
-			View all registered service;
-		</li>
-		<li>
-			Register a service, or authorize a service to register;
-		</li>
-		<li>
-			Set service registration mode:
-			<ol>
-				<li> <b>Automatic</b>: the server accept every services;
-				<li> <b>Manual (default) </b>: requests for new services are
-					queued and manually autorized by administrator
-				<li> <b>Disable</b> : only an administrator can
-					add service on the admin page.
-			</ol>
-		</li>
-	</ul>
-</p>
-
-<h1> API </h1>
-The API allows services to communicate with the AAS.
-<h2> Fonctions </h2>
-<p>
-	Services use the AAS through the following HTTP API. Services must
-	have been previously registered to the AAS by an administrator. <br />
-	All parameters are non-empty string. <br />
-	Every requests but <i>discover</i> <b>must</b> have a <i>key</i> parameter:
-	the association <i>key</i>/<i>ip</i> is checked upon each request.
-	<ul>
-		<li>
-			<b>GET /api/discover name=... url=... address=... email=</b> <br />
-			Register a service to the AAS <br />
-			Returns:
-			<ul>
-				<li> a key identifying the service </li>
-				<li> ok : a key has been generated; it will be sent by email upon administator approval </li>
-				<li> ko : wrong or missing data supplied or discovering disabled </li>
-			</ul>
-		</li>
-		<li>
-			<b>GET /api/update </b> <br />
-			Update a service's key. <br />
-			Returns:
-			<ul>
-				<li> the new key </li>
-				<li> ko : wrong key, key/ip </li>
-			</ul>
-		</li>
-		<li>
-			<b>GET /api/info?token=...</b> <br />
-			Retrieve info about the token owner <br />
-			Returns:
-			<ul>
-				<li> on 3 lines:
-				<ul>
-					<li> id </li>
-					<li> name </li>
-					<li> email </li>
-				</ul>
-				<li>ko : invalid token</li>
-			</ul>
-			<b>Note: </b> <i>info</i> may be used to check the validity
-			of a token.
-		<li>
-			<b>GET /api/login?login=...</b> <br />
-			Login the user to the AAS for the service who request it. <br />
-			Returns:
-			<ul>
-				<li> new : a new token has been generated (a name or email was found) </li>
-				<li> ok : a valid token was given </li>
-				<li> ko : wrong token, name or email </li>
-			</ul>
-		</li>
-		<li>
-			<b>GET /api/chain?token=...</b><br />
-			Update the given token if its valid. <br />
-			Returns:
-			<ul>
-				<li> the new token </li>
-				<li> ko : wrong token </li>.
-			</ul>
-		</li>
-		<li>
-			<b>GET /logout/token=...</b> <br />
-			Remove the token.
-		</li>
-	</ul>
-</p>
-<h2> Example </h2>
-<p>
-	To register a new service:
-	<pre><code>(earth)$ curl --data 'name=thipi&url=http://thipi.awesom.eu/&address=127.0.0.1&email=contact@awesom.eu' http://localhost:8080/api/discover
-K4U3cbACnEMYFfzLaTgwAspuR7NQ6S9Hdhg4LhBxTvKMRsqdtHTkSQxeKtZRGnR1
-</code></pre>
-	Service is now registered with given name and URL. The returned key shall now
-	be used to identify the service.
-</p>
-
-</div>
