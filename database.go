@@ -3,8 +3,10 @@ package main
 import (
 	_ "github.com/lib/pq"
 	"database/sql"
+	"log"
 )
 
+// XXX the C.* here are useless as conf is not loaded...
 var Admin User = User {
 		Id		:		1,			// by convention
 		Name	:		"admin",
@@ -65,6 +67,8 @@ func (db *Database) createTables() error {
 }
 
 func (db *Database) createAdmin() error {
+	Admin.Email = C.AdminEmail
+
 	if u, err := db.GetUser(1); err != nil {
 		return db.AddUser(&Admin)
 	} else {
@@ -75,6 +79,10 @@ func (db *Database) createAdmin() error {
 }
 
 func (db *Database) createAuth() error {
+	Auth.Name = C.Name
+	Auth.Url = C.URL
+	Auth.Email =  C.AdminEmail
+
 	if s, err := db.GetService(1); err != nil {
 		return db.AddService(&Auth)
 	} else {
@@ -105,7 +113,9 @@ func (db *Database) Init() error {
 	services = map[string]*Service{}
 
 	if err := db.createTables(); err != nil { return err }
+	log.Println(Admin)
 	if err := db.createAdmin(); err != nil { return err }
+	log.Println(Admin)
 	if err := db.createAuth(); err != nil { return err }
 
 	return db.loadServices()
