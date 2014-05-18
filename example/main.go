@@ -21,6 +21,7 @@ type Config struct{ URL, Key string }
 
 var (
 	port  = flag.String("port", "8082", "Listening HTTP port")
+	ssl  = flag.Bool("ssl", true, "Use SSL")
 	confd = "./conf/"
 	Conf   = map[string]Config{}
 	Client = &http.Client{}
@@ -309,11 +310,17 @@ func leave(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	flag.Parse()
 	loadConfigs()
 
 	http.HandleFunc("/", connect)
 	http.HandleFunc("/leave", leave)
 
-	log.Print("Launching on https://localhost:" + *port)
-	log.Fatal(http.ListenAndServeTLS(":"+*port, "cert.pem", "key.pem", nil))
+	if *ssl {
+		log.Print("Launching on https://localhost:" + *port)
+		log.Fatal(http.ListenAndServeTLS(":"+*port, "cert.pem", "key.pem", nil))
+	} else {
+		log.Print("Launching on http://localhost:" + *port)
+		log.Fatal(http.ListenAndServe(":"+*port, nil))
+	}
 }
