@@ -3,43 +3,9 @@ package main
 import (
 	"github.com/gorilla/securecookie"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"runtime"
 	"strings"
 )
-
-// LogError calls log.Printf on error, and adds location in source code
-func LogError(err error) {
-	_, file, line, ok := runtime.Caller(1)
-	if ok {
-		log.Printf("%s:%d : %s", file, line, err)
-	} else {
-		log.Println(err)
-	}
-}
-
-// LogHttp log error and sends it to browser
-func LogHttp(w http.ResponseWriter, err error) {
-	_, file, line, ok := runtime.Caller(1)
-	if ok {
-		log.Printf("%s:%d : %s", file, line, err)
-	} else {
-		log.Println(err)
-	}
-	http.Error(w, err.Error(), http.StatusInternalServerError)
-}
-
-// LogFatal calls log.Fatalf on error, and adds location in source code
-func LogFatal(err error) {
-	_, file, line, ok := runtime.Caller(1)
-	if ok {
-		log.Fatalf("%s:%d : %s", file, line, err)
-	} else {
-		log.Fatal(err)
-	}
-	
-}
 
 // WriteFiles write the files it's given as argument to w
 func writeFiles(w http.ResponseWriter, files ...string) error {
