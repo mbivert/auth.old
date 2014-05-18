@@ -1,0 +1,23 @@
+{
+	"URL"				:		"https://auth.awesom.eu",
+	"Port"				:		"8080",
+	"Name"				:		"AAS",
+	"AdminEmail"		:		"root@awesom.eu",
+
+	"Mode"				:		"Manual",
+	"Timeout"			:		3600,
+	"LenToken"			:		64,
+	"LenKey"			:		64,
+
+	"VerifyCaptcha"		:		false,
+
+	"SSL"				:		true,
+	"Certificate"		:		"cert.pem",
+	"PKey"				:		"key.pem",
+
+	"SMTPServer"		:		"smtp.gmail.com",
+	"SMTPPort"			:		"587",
+	"AuthEmail"			:		"auth.newsome@gmail.com",
+	"AuthPasswd"		:		"whatever"
+
+}

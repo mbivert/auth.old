@@ -59,11 +59,11 @@ var (
 	NonSense		= errors.New("This Sense Makes No Action")
 	NoEmailErr		= errors.New("Email is mandatory")
 	LongEmailErr	= errors.New("Email is too long (maxsize: "+
-						strconv.Itoa(LenToken-1)+")")
+						strconv.Itoa(C.LenToken-1)+")")
 	EmailFmtErr		= errors.New("Wrong Email format (you@provider)")
 	NoNameErr		= errors.New("Name is mandatory")
 	LongNameErr		= errors.New("Name is too long (maxsize: "+
-						strconv.Itoa(LenToken-1)+")")
+						strconv.Itoa(C.LenToken-1)+")")
 	NameFmtErr		= errors.New("Invalid characters in name (no whites or @)")
 	WrongUser		= errors.New("User name or password already in use")
 	SMTPErr			= errors.New("Email not send. Contact an admin.")

@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	LenToken		=	64
-	TokenTimeout	=	3600		// 1h
 	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
@@ -31,7 +29,7 @@ type Msg interface {
 func randomString(n int) string {
 	buf := make([]byte, n)
 
-	for i := 0; i < LenToken; i++ {
+	for i := 0; i < C.LenToken; i++ {
 		buf[i] = alnum[rand.Intn(len(alnum))]
 	}
 
@@ -40,7 +38,7 @@ func randomString(n int) string {
 
 func mkToken() string {
 gen:
-	token := randomString(LenToken)
+	token := randomString(C.LenToken)
 	if _, exists := tokens[token]; exists {
 		goto gen
 	}
@@ -61,7 +59,7 @@ func (m NewMsg) process() {
 	utokens[m.uid] = append(utokens[m.uid], Token{ m.key, token })
 
 	// setup timeout
-	exptime := time.Now().Unix()+TokenTimeout
+	exptime := time.Now().Unix()+C.Timeout
 	timeouts[exptime] = append(timeouts[exptime], token)
 
 	// return value
@@ -121,7 +119,7 @@ func (m UpdateMsg) process() {
 	}
 
 	// setup timeout
-	exptime := time.Now().Unix()+TokenTimeout
+	exptime := time.Now().Unix()+C.Timeout
 	timeouts[exptime] = append(timeouts[exptime], token)
 
 	// return new one

@@ -8,17 +8,17 @@ import (
 var Admin User = User {
 		Id		:		1,			// by convention
 		Name	:		"admin",
-		Email	:		*admemail,
+		Email	:		C.AdminEmail,
 		Admin	:		true,
 }
-var Auth  Service = Service {
+var Auth Service = Service {
 		Id		:		1,			// by convention
-		Name	:		"AAS",
-		Url		:		*aasurl,
-		Key		:		randomString(64),
+		Name	:		C.Name,
+		Url		:		C.URL,
+		Key		:		randomString(C.LenKey),
 		Mode	:		true,
 		Address	:		"127.0.0.1",
-		Email	:		*admemail,
+		Email	:		C.AdminEmail,
 }
 
 

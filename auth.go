@@ -13,9 +13,9 @@ func sendEmail(to, subject, msg string) error {
 	body := "To: " + to + "\r\nSubject: " +
 		subject + "\r\n\r\n" + msg
 
-	auth := smtp.PlainAuth("", *from, *passwd, *smtps)
+	auth := smtp.PlainAuth("", C.AuthEmail, C.AuthPasswd, C.SMTPServer)
 
-	if err := smtp.SendMail(*smtps+":"+*smtpp, auth, *from,
+	if err := smtp.SendMail(C.SMTPServer+":"+C.SMTPPort, auth, C.AuthEmail,
 			[]string{to},[]byte(body)); err != nil {
 		return MkIErr(err)
 	}
@@ -38,7 +38,7 @@ func sendToken(email string, token *Token) error {
 func checkName(name string) error {
 	switch {
 	case name == "":							return NoNameErr
-	case len(name) >= LenToken:					return LongNameErr
+	case len(name) >= C.LenToken:				return LongNameErr
 	case strings.Contains(name, "@ \t\n\r"):	return NameFmtErr
 	}
 
@@ -48,7 +48,7 @@ func checkName(name string) error {
 func checkEmail(email string) error {
 	switch {
 	case email == "":						return NoEmailErr
-	case len(email) >= LenToken:			return LongEmailErr
+	case len(email) >= C.LenToken:			return LongEmailErr
 	case !strings.Contains(email, "@"):		return EmailFmtErr
 	}
 
@@ -56,7 +56,7 @@ func checkEmail(email string) error {
 }
 
 // isToken check whether the login is a token or a name/email.
-func isToken(login string) bool { return len(login) == LenToken }
+func isToken(login string) bool { return len(login) == C.LenToken }
 
 // isEmail check whether the login is a name or an email
 func isEmail(login string) bool { return strings.Contains(login, "@") }
@@ -121,7 +121,7 @@ func AddService(name, url, address, email string) (string, error) {
 
 	if ServiceMode == Disabled { return "ko", nil }
 
-	s := Service{ -1, name, url, randomString(64), false, address, email }
+	s := Service{ -1, name, url, randomString(C.LenKey), false, address, email }
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}

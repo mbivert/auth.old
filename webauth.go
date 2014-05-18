@@ -13,16 +13,7 @@ import (
 )
 
 var (
-	port = flag.String("port", "8080", "Listening HTTP port")
-	verifcaptcha = flag.Bool("vc", true, "Verify captcha")
-	cert = flag.String("cert", "cert.pem", "x509 Certificate")
-	key = flag.String("key", "key.pem", "Private key to sign certificate")
-	smtps = flag.String("smtps", "smtp.gmail.com", "SMTP server")
-	smtpp = flag.String("smtpp", "587", "Port of SMTP server")
-	from = flag.String("from", "admin@whatev.er", "Email to send tokens from")
-	passwd = flag.String("passwd", "wrong password", "Password for email")
-	admemail = flag.String("email", "admin@whatev.er", "First administrator email")
-	aasurl = flag.String("url", "https://auth.awesom.eu", "URL for AAS")
+	conf = flag.String("conf", "config.json", "Configuration file")
 
 	rtmpl = template.Must(
 		template.New("register.html").ParseFiles("templates/register.html"))
@@ -56,7 +47,7 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 			log.Println(err)
 		}
 	case "POST":
-		if *verifcaptcha {
+		if C.VerifyCaptcha {
 			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
 				w.Write([]byte("<p>Bad captcha; try again. </p>"))
 				return
@@ -82,7 +73,7 @@ func login(w http.ResponseWriter, r *http.Request, token string) {
 			log.Println(err)
 		}
 	case "POST":
-		if *verifcaptcha {
+		if C.VerifyCaptcha {
 			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
 				w.Write([]byte("<p>Bad captcha; try again. </p>"))
 				return
@@ -327,6 +318,8 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	flag.Parse()
 
+	LoadConfig(*conf)
+
 	go ProcessMsg()
 	go Timeouts()
 
@@ -349,6 +342,11 @@ func main() {
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir("./static/"))))
 
-	log.Println("Launching on https://localhost:" + *port)
-	log.Fatal(http.ListenAndServeTLS(":"+*port, *cert, *key, nil))
+	if C.SSL {
+		log.Println("Launching on https://localhost:" + C.Port)
+		log.Fatal(http.ListenAndServeTLS(":"+C.Port, C.Certificate, C.PKey, nil))
+	} else {
+		log.Println("Launching on http://localhost:" + C.Port)
+		log.Fatal(http.ListenAndServe(":"+C.Port, nil))
+	}
 }
