@@ -11,7 +11,7 @@
 	<p><img id="image" src="/captcha/{{.CaptchaId}}.png" alt="Captcha image"></p>
 	<p> (Reload for new captcha) </p>
 	<input type="hidden" name="captchaId" value="{{.CaptchaId}}" /><br>
-	<input type="text" name="captchaRes" /><br />
+	<input autocomplete="off" type="text" name="captchaRes" /><br />
 	<input class="btn btn-success btn-lg" type="submit" value="Register" />
 	<script>
 		function setSrcQuery(e, q) {
