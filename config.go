@@ -41,6 +41,12 @@ func LoadConfig(filename string) {
 		log.Fatal("Error while parsing configuration file: ", err)
 	}
 
+	switch C.Mode {
+	case "Disable": ServiceMode = Disabled
+	case "Automatic": ServiceMode = Automatic
+	default: ServiceMode = Manual
+	}
+
 	// No checking:
 	// Wrong configuration -> undefined behavior.
 }
