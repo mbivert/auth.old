@@ -101,8 +101,8 @@ type UpdateMsg struct {
 
 func (m UpdateMsg) process() {
 	// check old one
-	id := tokens[m.token]
-	if id == 0 { return }
+	id, ok := tokens[m.token]
+	if !ok { m.answer <- ""; return }
 
 	token := mkToken()
 
