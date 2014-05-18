@@ -3,9 +3,25 @@ package main
 import (
 	"github.com/gorilla/securecookie"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 )
+
+const (
+	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
+)
+
+// Generate random string of n bytes
+func randomString(n int) string {
+	buf := make([]byte, n)
+
+	for i := 0; i < C.LenToken; i++ {
+		buf[i] = alnum[rand.Intn(len(alnum))]
+	}
+
+	return string(buf)
+}
 
 // WriteFiles write the files it's given as argument to w
 func writeFiles(w http.ResponseWriter, files ...string) error {
@@ -20,7 +36,6 @@ func writeFiles(w http.ResponseWriter, files ...string) error {
 }
 
 func ok(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotImplemented)
 	w.Write([]byte("ok"))
 }
 func ko(w http.ResponseWriter) {

@@ -1,14 +1,9 @@
 package main
 
 import (
-	"math/rand"
 	"time"
 //	"log"
 //	"reflect"
-)
-
-const (
-	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
 type Token struct {
@@ -24,16 +19,6 @@ var chanmsg		chan Msg
 
 type Msg interface {
 	process()
-}
-
-func randomString(n int) string {
-	buf := make([]byte, n)
-
-	for i := 0; i < C.LenToken; i++ {
-		buf[i] = alnum[rand.Intn(len(alnum))]
-	}
-
-	return string(buf)
 }
 
 func mkToken() string {
