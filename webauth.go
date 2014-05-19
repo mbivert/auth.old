@@ -16,7 +16,7 @@ import (
 var (
 	conf = flag.String("conf", "config.json", "Configuration file")
 
-	loginForm = []byte("")
+	loginForm []byte
 
 	rtmpl = template.Must(
 		template.New("register.html").ParseFiles("templates/register.html"))

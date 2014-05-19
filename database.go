@@ -81,6 +81,7 @@ func (db *Database) createAuth() error {
 	Auth.Name = C.Name
 	Auth.Url = C.URL
 	Auth.Email =  C.AdminEmail
+	Auth.Key= randomString(C.LenKey)
 
 	if s, err := db.GetService(1); err != nil {
 		return db.AddService(&Auth)
