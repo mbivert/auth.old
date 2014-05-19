@@ -49,9 +49,10 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 	case "POST":
 		if C.VerifyCaptcha {
 			if !captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaRes")) {
-				w.Write([]byte("<p>Bad captcha; try again. </p>"))
+				SetError(w, BadCaptchaErr)
+				http.Redirect(w, r, "/register", http.StatusFound)
 				return
-			}
+		}
 		}
 
 		if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {

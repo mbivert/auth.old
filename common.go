@@ -71,4 +71,5 @@ var (
 	NotAdminErr		= errors.New("Can't go there.")
 	SetCookieErr	= errors.New("Can't set cookie. (contact us)")
 	EmptyFieldsErr	= errors.New("void.")
+	BadCaptchaErr	= errors.New("Bad Captcha. Try again")
 )
