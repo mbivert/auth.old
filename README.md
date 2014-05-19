@@ -6,6 +6,8 @@ One time-token reduces replay attacks. Note however that
 services using the auth are not required to chain the token
 each time.
 
+You can see a demo at [auth.awesom.eu](https://auth.awesom.eu).
+
 # Options
 Here are the supported options:
 
