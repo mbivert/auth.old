@@ -16,7 +16,7 @@ echo ''
 
 # using https://www.openssl.org/docs/HOWTO/certificates.txt
 echo '# Generating associated certificate (cert.pem)'
-echo '# (WATCH OUT for the Common Name field, eg. 'www.mywebsite.com')
+echo '# (WATCH OUT for the Common Name field, eg. www.mywebsite.com)'
 openssl req -new -x509 -key key.pem -out cert.pem -days 1095
 
 echo '# Installing key for example/ too'
