@@ -7,6 +7,8 @@ services using the auth are not required to chain the token
 each time.
 
 You can see a demo at [auth.awesom.eu](https://auth.awesom.eu).
+[tags.awesom.eu](https://tags.awesom.eu) may serve as a service
+example.
 
 # Options
 Here are the supported options:
