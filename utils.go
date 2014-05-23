@@ -9,14 +9,14 @@ import (
 )
 
 const (
-	alnum 			=	"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
+	alnum = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
 // Generate random string of n bytes
 func randomString(n int) string {
 	buf := make([]byte, n)
 
-	for i := 0; i < C.LenToken; i++ {
+	for i := 0; i < n; i++ {
 		buf[i] = alnum[rand.Intn(len(alnum))]
 	}
 
@@ -42,9 +42,11 @@ func ko(w http.ResponseWriter) {
 	w.Write([]byte("ko"))
 }
 
-var hashKey = []byte(securecookie.GenerateRandomKey(32))
-var blockKey = []byte(securecookie.GenerateRandomKey(32))
-var s = securecookie.New(hashKey, blockKey)
+var (
+	hashKey = []byte(securecookie.GenerateRandomKey(32))
+	blockKey = []byte(securecookie.GenerateRandomKey(32))
+	s = securecookie.New(hashKey, blockKey)
+)
 
 func SetToken(w http.ResponseWriter, token string) error {
 	encoded, err := s.Encode("auth-token", token)

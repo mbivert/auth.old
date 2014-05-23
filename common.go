@@ -48,6 +48,7 @@ func (e *InternalError) Error() string {
 }
 
 func Err(err error) *InternalError {
+	if err == nil { return nil }
 	_, file, line, _ := runtime.Caller(1)
 
 	return &InternalError{ time.Now(), file, line, err.Error() }

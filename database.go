@@ -106,8 +106,6 @@ func (db *Database) loadServices() error {
 }
 
 func (db *Database) Init() error {
-	db.services = map[string]*Service{}
-
 	if err := db.createTables(); err != nil { return err }
 	if err := db.createAdmin(); err != nil { return err }
 	if err := db.createAuth(); err != nil { return err }

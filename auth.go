@@ -17,12 +17,8 @@ func sendEmail(to, subject, msg string) error {
 
 	auth := smtp.PlainAuth("", C.AuthEmail, C.AuthPasswd, C.SMTPServer)
 
-	if err := smtp.SendMail(C.SMTPServer+":"+C.SMTPPort, auth, C.AuthEmail,
-			[]string{to},[]byte(body)); err != nil {
-		return Err(err)
-	}
-
-	return nil
+	return Err(smtp.SendMail(C.SMTPServer+":"+C.SMTPPort,
+		auth, C.AuthEmail, []string{to},[]byte(body)))
 }
 
 // sendEmail sends a token via email to an user.
@@ -84,7 +80,6 @@ func Register(name, email, passwd string) error {
 	u := User{ -1, name, email, passwd, false }
 
 	if err := db.AddUser(&u); err != nil {
-		log.Println(err)
 		return WrongUser
 	}
 
