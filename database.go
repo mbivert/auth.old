@@ -38,6 +38,7 @@ func (db *Database) createTables() error {
 			id						SERIAL,
 			name		TEXT		UNIQUE,
 			email		TEXT		UNIQUE,
+			passwd		TEXT,
 			admin		BOOLEAN,
 			PRIMARY KEY ("id")
 		)
@@ -116,10 +117,10 @@ func (db *Database) Init() error {
 // Users
 func (db *Database) AddUser(u *User) error {
 	if err := db.QueryRow(`INSERT INTO
-		users(name, email, admin)
-		VALUES($1, $2, $3)
-		RETURNING id`, u.Name,
-			u.Email, u.Admin).Scan(&u.Id); err != nil {
+		users(name, email, passwd, admin)
+		VALUES($1, $2, $3, $4)
+		RETURNING id`, u.Name, u.Email, u.Passwd,
+			u.Admin).Scan(&u.Id); err != nil {
 		return Err(err)
 	}
 
@@ -130,10 +131,10 @@ func (db *Database) GetUser(id int32) (*User, error) {
 	var u User
 
 	if err := db.QueryRow(`
-		SELECT id, name, email, admin
+		SELECT id, name, email, passwd, admin
 		FROM users
 		WHERE id = $1`, id).Scan(&u.Id, &u.Name,
-			&u.Email, &u.Admin); err != nil {
+			&u.Email, &u.Passwd, &u.Admin); err != nil {
 		return nil, Err(err)
 	}
 
@@ -144,11 +145,11 @@ func (db *Database) GetUser2(login string) (*User, error) {
 	var u User
 
 	if err := db.QueryRow(`
-		SELECT id, name, email, admin
+		SELECT id, name, email, passwd, admin
 		FROM users
 		WHERE	name	= $1
 		OR		email	= $1`, login).Scan(&u.Id,
-			&u.Name, &u.Email, &u.Admin); err != nil {
+			&u.Name, &u.Email, &u.Passwd, &u.Admin); err != nil {
 		return nil, Err(err)
 	}
 

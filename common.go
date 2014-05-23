@@ -11,6 +11,7 @@ type User struct {
 	Id			int32
 	Name		string
 	Email		string
+	Passwd		string
 	Admin		bool
 }
 
@@ -66,10 +67,11 @@ var (
 						strconv.Itoa(C.LenToken-1)+")")
 	NameFmtErr		= errors.New("Invalid characters in name (no whites or @)")
 	WrongUser		= errors.New("User name or password already in use")
-	SMTPErr			= errors.New("Email not send. Contact an admin.")
+	SMTPErr			= errors.New("Email not send.")
 	MouldyCookie	= errors.New("Mouldy Cookie, Sour Tea!")
 	NotAdminErr		= errors.New("Can't go there.")
-	SetCookieErr	= errors.New("Can't set cookie. (contact us)")
+	SetCookieErr	= errors.New("Can't set cookie. (internal error)")
 	EmptyFieldsErr	= errors.New("void.")
 	BadCaptchaErr	= errors.New("Bad Captcha. Try again")
+	BadPasswd		= errors.New("Bad Password. Try again")
 )

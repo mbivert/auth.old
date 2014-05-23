@@ -1,12 +1,14 @@
 package main
 
 import (
+	"crypto/sha512"
+	"encoding/base64"
 	"strings"
 	"net/smtp"
 	"log"
 )
 
-// sendEmail send an email to a user.
+// sendEmail sends an email to an user.
 // XXX use several SMTP according to the destination email
 // provider to speed things up.
 func sendEmail(to, subject, msg string) error {
@@ -23,6 +25,7 @@ func sendEmail(to, subject, msg string) error {
 	return nil
 }
 
+// sendEmail sends a token via email to an user.
 func sendToken(email string, token *Token) error {
 	s := db.GetService2(token.Key)
 
@@ -64,7 +67,7 @@ func isEmail(login string) bool { return strings.Contains(login, "@") }
 // Register add a new user to both database and cache.
 // If the registration succeeds, a(n activation) token is
 // sent to the user.
-func Register(name, email string) error {
+func Register(name, email, passwd string) error {
 	if err := checkName(name); err != nil {
 		return err
 	}
@@ -72,7 +75,13 @@ func Register(name, email string) error {
 		return err
 	}
 
-	u := User{ -1, name, email, false }
+	if passwd != "" {
+		h := sha512.New()
+		h.Write([]byte(passwd))
+		passwd = base64.StdEncoding.EncodeToString(h.Sum(nil))
+	}
+
+	u := User{ -1, name, email, passwd, false }
 
 	if err := db.AddUser(&u); err != nil {
 		log.Println(err)
@@ -82,7 +91,8 @@ func Register(name, email string) error {
 	return sendToken(email, NewToken(u.Id, Auth.Key))
 }
 
-func Login(login string) (string, error) {
+func Login(login, passwd string) (string, error) {
+	// login with token
 	if isToken(login) {
 		ntoken := UpdateToken(login)
 		if ntoken == "" {
@@ -91,17 +101,28 @@ func Login(login string) (string, error) {
 		return ntoken, nil
 	}
 
+	// get user associated with login
 	u, err := db.GetUser2(login)
 	if err != nil {
-		log.Println(err)
 		return "", NoSuchErr
 	}
 
+	// login with password
+	if passwd != "" {
+		h := sha512.New()
+		h.Write([]byte(passwd))
+		passwd = base64.StdEncoding.EncodeToString(h.Sum(nil))
+
+		if passwd == u.Passwd {
+			return NewToken(u.Id, Auth.Key).Token, nil
+		} else {
+			return "", BadPasswd
+		}
+	}
+
+	// 2-steps login (sending token through token)
 	return "", sendToken(u.Email, NewToken(u.Id, Auth.Key))
 }
-
-/*func LoginPassword() {
-}*/
 
 func Logout(token string) {
 	RemoveToken(token)

@@ -8,6 +8,11 @@
 		<span class="input-group-addon">@</span>
 		<input name="email" type="text" class="form-control" placeholder="Email" />
 	</div>
+	<div class="input-group">
+		<span class="input-group-addon">★</span>
+		<input name="passwd" type="password" class="form-control" placeholder="Password" />
+	</div>
+	<p>(Password is optional; let empty to disable it)</p>
 	<p><img id="image" src="/captcha/{{.CaptchaId}}.png" alt="Captcha image"></p>
 	<p> (Reload for new captcha) </p>
 	<input type="hidden" name="captchaId" value="{{.CaptchaId}}" /><br>

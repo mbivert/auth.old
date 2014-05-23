@@ -2,7 +2,7 @@
 	"URL"				:		"https://auth.awesom.eu",
 	"Port"				:		"8080",
 	"Name"				:		"AAS",
-	"AdminEmail"		:		"root@awesom.eu",
+	"AdminEmail"		:		"mathieu.root@gmail.com",
 
 	"Mode"				:		"Manual",
 	"Timeout"			:		3600,
@@ -10,6 +10,7 @@
 	"LenKey"			:		64,
 
 	"VerifyCaptcha"		:		false,
+	"PasswdMinLen"		:		10,
 
 	"SSL"				:		true,
 	"Certificate"		:		"cert.pem",
@@ -18,6 +19,6 @@
 	"SMTPServer"		:		"smtp.gmail.com",
 	"SMTPPort"			:		"587",
 	"AuthEmail"			:		"auth.newsome@gmail.com",
-	"AuthPasswd"		:		"whatever"
+	"AuthPasswd"		:		"New 4wesom authserveR;"
 
 }

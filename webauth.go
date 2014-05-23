@@ -52,10 +52,12 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 				SetError(w, BadCaptchaErr)
 				http.Redirect(w, r, "/register", http.StatusFound)
 				return
+			}
 		}
-		}
+		name, email	:= r.FormValue("name"), r.FormValue("email")
+		passwd		:= r.FormValue("passwd")
 
-		if err := Register(r.FormValue("name"), r.FormValue("email")); err != nil {
+		if err := Register(name, email, passwd); err != nil {
 			SetError(w, err)
 			http.Redirect(w, r, "/register", http.StatusFound)
 			return
@@ -71,7 +73,8 @@ func login(w http.ResponseWriter, r *http.Request, token string) {
 	case "GET":
 		w.Write(loginForm)
 	case "POST":
-		if token, err := Login(r.FormValue("login")); err != nil {
+		login, passwd := r.FormValue("login"), r.FormValue("passwd")
+		if token, err := Login(login, passwd); err != nil {
 			SetError(w, err)
 		} else if token == "" {
 			SetInfo(w, "Check you email account!")

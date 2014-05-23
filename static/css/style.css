@@ -1,11 +1,17 @@
 .input-services input {
-	border:			none;
-	background:		transparent;
-	width:			100%;
+	border			:	none;
+	background		:	transparent;
+	width			:	100%;
 }
 
 #info {
-	width:			30%;
-	margin-left: auto;
-	margin-right: auto;
+	width			:	30%;
+	margin-left		:	auto;
+	margin-right	:	auto;
+}
+
+// same size
+.input-group-addon {
+    min-width		:	50px;
+    text-align		:	left;
 }

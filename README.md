@@ -10,6 +10,11 @@ You can see a demo at [auth.awesom.eu](https://auth.awesom.eu).
 [tags.awesom.eu](https://tags.awesom.eu) may serve as a service
 example.
 
+It's possible to use a password to connect to Auth, but not
+mandatory. However, connection through services *must* use
+token-authentification : this avoid the password being known
+to potentially malicious services.
+
 # Options
 Here are the supported options:
 
