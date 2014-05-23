@@ -11,6 +11,7 @@ type Config struct {
 	Port			string
 	Name			string
 	AdminEmail		string
+	DBConnect		string
 
 	Mode			string
 	Timeout			int64

@@ -25,7 +25,7 @@ type Database struct {
 // XXX secure connection
 func NewDatabase() (*Database, error) {
 	tmp, err := sql.Open("postgres",
-		"dbname=auth user=auth host=localhost sslmode=disable")
+		C.DBConnect)
 	if err != nil { return nil, Err(err) }
 
 	db = &Database{ tmp, map[string]*Service{} }

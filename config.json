@@ -1,24 +1,24 @@
 {
-	"URL"				:		"https://auth.awesom.eu",
-	"Port"				:		"8080",
-	"Name"				:		"AAS",
-	"AdminEmail"		:		"mathieu.root@gmail.com",
+	"URL"				:	"https://auth.awesom.eu",
+	"Port"				:	"8080",
+	"Name"				:	"AAS",
+	"AdminEmail"		:	"mathieu.root@gmail.com",
+	"DBConnect"			:	"dbname=auth user=auth host=localhost sslmode=disable",
 
-	"Mode"				:		"Manual",
-	"Timeout"			:		3600,
-	"LenToken"			:		64,
-	"LenKey"			:		64,
+	"Mode"				:	"Manual",
+	"Timeout"			:	3600,
+	"LenToken"			:	64,
+	"LenKey"			:	64,
 
-	"VerifyCaptcha"		:		false,
-	"PasswdMinLen"		:		10,
+	"VerifyCaptcha"		:	false,
 
-	"SSL"				:		true,
-	"Certificate"		:		"cert.pem",
-	"PKey"				:		"key.pem",
+	"SSL"				:	true,
+	"Certificate"		:	"cert.pem",
+	"PKey"				:	"key.pem",
 
-	"SMTPServer"		:		"smtp.gmail.com",
-	"SMTPPort"			:		"587",
-	"AuthEmail"			:		"auth.newsome@gmail.com",
-	"AuthPasswd"		:		"New 4wesom authserveR;"
+	"SMTPServer"		:	"smtp.gmail.com",
+	"SMTPPort"			:	"587",
+	"AuthEmail"			:	"auth.newsome@gmail.com",
+	"AuthPasswd"		:	""
 
 }

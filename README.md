@@ -51,6 +51,7 @@ in undefined behavior(s). Fields are:
 * Port : HTTP listening port for service
 * Name : Name of the auth service
 * AdminEmail : Email of the first administrator
+* DBConnect : Connection string for PostgreSQL
 * Mode : Service registration mode (either Automatic, Manual, Disable)
 * Timeout : Lifetime of a token, (seconds)
 * LenToken : Length of a token (bytes)
