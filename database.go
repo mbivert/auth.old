@@ -277,4 +277,11 @@ func (db *Database) DelService(key string) {
 		// XXX delete associated tokens
 	}
 }
-//	UpdateService()
+
+func (db* Database) UpdateKey(key, nkey string) {
+	// if collision happens, it MUST be a sign or something, so let it be
+	db.services[nkey] = db.services[key]
+	delete(db.services, key)
+	db.Query("UPDATE services SET key = $1 WHERE key = $2", nkey, key)
+}
+

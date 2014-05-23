@@ -23,8 +23,10 @@ Returns:
 * ok : service registered (Manual mode only)
 * ko : Wrong paramaters or Disable mode
 
-## Update (NOT IMPLEMENTED)
-Update the key of the service
+## Update
+Update the key of the service. If one needs to update more, it
+may very well be safer to register a new service and ask admins
+to delete the old one.
 
   /api/update key=...
 

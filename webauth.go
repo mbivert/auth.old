@@ -244,21 +244,19 @@ func discover(w http.ResponseWriter, r *http.Request) {
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
-	ko(w)
+	nkey := randomString(C.LenKey)
+	db.UpdateKey(r.FormValue("key"), nkey)
+	w.Write([]byte(nkey))
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
-	token, key := r.FormValue("token"), r.FormValue("key")
-
-	if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
-		ko(w)
-		return
-	}
+	token := r.FormValue("token")
 
 	if u, err := db.GetUser(OwnerToken(token)); err != nil {
 		ko(w)
 	} else {
-		w.Write([]byte(strconv.Itoa(int(u.Id)) + "\n" + u.Name + "\n" + u.Email))
+		w.Write([]byte(strconv.Itoa(int(u.Id)) + "\n" +
+			u.Name + "\n" + u.Email))
 	}
 }
 
