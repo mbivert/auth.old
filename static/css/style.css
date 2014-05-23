@@ -10,7 +10,7 @@
 	margin-right	:	auto;
 }
 
-// same size
+/* same size */
 .input-group-addon {
     min-width		:	50px;
     text-align		:	left;
