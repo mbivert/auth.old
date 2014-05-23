@@ -47,7 +47,7 @@ func (e *InternalError) Error() string {
 		" "+e.Msg
 }
 
-func MkIErr(err error) *InternalError {
+func Err(err error) *InternalError {
 	_, file, line, _ := runtime.Caller(1)
 
 	return &InternalError{ time.Now(), file, line, err.Error() }

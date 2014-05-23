@@ -25,7 +25,7 @@ type Database struct {
 func NewDatabase() (*Database, error) {
 	tmp, err := sql.Open("postgres",
 		"dbname=auth user=auth host=localhost sslmode=disable")
-	if err != nil { return nil, MkIErr(err) }
+	if err != nil { return nil, Err(err) }
 
 	db = &Database{ tmp }
 
@@ -41,7 +41,7 @@ func (db *Database) createTables() error {
 			admin		BOOLEAN,
 			PRIMARY KEY ("id")
 		)
-	`); err != nil { return MkIErr(err) }
+	`); err != nil { return Err(err) }
 
 	if _, err := db.Query(`CREATE TABLE IF NOT EXISTS
 		services(
@@ -54,7 +54,7 @@ func (db *Database) createTables() error {
 			email		TEXT,
 			PRIMARY KEY ("id")
 		)
-	`); err != nil { return MkIErr(err) }
+	`); err != nil { return Err(err) }
 
 	return nil
 }
@@ -91,7 +91,7 @@ func (db *Database) loadServices() error {
 		SELECT id, name, url, key, mode, address, email
 		FROM services`)
 	if err != nil {
-		return MkIErr(err)
+		return Err(err)
 	}
 
 	for rows.Next() {
@@ -120,7 +120,7 @@ func (db *Database) AddUser(u *User) error {
 		VALUES($1, $2, $3)
 		RETURNING id`, u.Name,
 			u.Email, u.Admin).Scan(&u.Id); err != nil {
-		return MkIErr(err)
+		return Err(err)
 	}
 
 	return nil
@@ -134,7 +134,7 @@ func (db *Database) GetUser(id int32) (*User, error) {
 		FROM users
 		WHERE id = $1`, id).Scan(&u.Id, &u.Name,
 			&u.Email, &u.Admin); err != nil {
-		return nil, MkIErr(err)
+		return nil, Err(err)
 	}
 
 	return &u, nil
@@ -149,7 +149,7 @@ func (db *Database) GetUser2(login string) (*User, error) {
 		WHERE	name	= $1
 		OR		email	= $1`, login).Scan(&u.Id,
 			&u.Name, &u.Email, &u.Admin); err != nil {
-		return nil, MkIErr(err)
+		return nil, Err(err)
 	}
 
 	return &u, nil
@@ -179,7 +179,7 @@ func (db *Database) GetAdminMail() ([]string, error) {
 		FROM users
 	WHERE admin = true`)
 
-	if err != nil { return nil, MkIErr(err) }
+	if err != nil { return nil, Err(err) }
 
 	for rows.Next() {
 		var email string
@@ -201,7 +201,7 @@ func (db *Database) AddService(s *Service) error {
 		VALUES($1, $2, $3, $4, $5, $6)
 		RETURNING id`, s.Name, s.Url, s.Key, s.Mode, s.Address, s.Email).Scan(&s.Id)
 
-	if err != nil {	return MkIErr(err) }
+	if err != nil {	return Err(err) }
 
 	services[s.Key] = s
 
@@ -217,7 +217,7 @@ func (db *Database) GetService(id int32) (*Service, error) {
 		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url,
 			&s.Key, &s.Mode, &s.Address, &s.Email)
 
-	if err != nil { return nil, MkIErr(err) }
+	if err != nil { return nil, Err(err) }
 
 	return &s, nil
 }
@@ -229,14 +229,14 @@ func (db *Database) GetService2(key string) *Service {
 func (db *Database) SetMode(id int32, on bool) error {
 	var key string
 
-	if id == Auth.Id { return MkIErr(NonSense) }
+	if id == Auth.Id { return Err(NonSense) }
 
 	err := db.QueryRow(`
 		UPDATE services
 			SET mode = $1
 			WHERE id = $2
 		RETURNING key`, on, id).Scan(&key)
-	if err != nil { return MkIErr(err) }
+	if err != nil { return Err(err) }
 
 	services[key].Mode = on
 

@@ -48,7 +48,7 @@ var s = securecookie.New(hashKey, blockKey)
 
 func SetToken(w http.ResponseWriter, token string) error {
 	encoded, err := s.Encode("auth-token", token)
-	if err != nil { return MkIErr(err) }
+	if err != nil { return Err(err) }
 
 	cookie := &http.Cookie {
 		Name	:	"auth-token",

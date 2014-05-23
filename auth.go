@@ -17,7 +17,7 @@ func sendEmail(to, subject, msg string) error {
 
 	if err := smtp.SendMail(C.SMTPServer+":"+C.SMTPPort, auth, C.AuthEmail,
 			[]string{to},[]byte(body)); err != nil {
-		return MkIErr(err)
+		return Err(err)
 	}
 
 	return nil
