@@ -5,23 +5,17 @@ import (
 	"database/sql"
 )
 
-// XXX the C.* here are useless as conf is not loaded...
+// Remaining fields loaded from config
 var Admin User = User {
 		Id		:		1,			// by convention
 		Name	:		"admin",
-		Email	:		C.AdminEmail,
 		Admin	:		true,
 }
 var Auth Service = Service {
 		Id		:		1,			// by convention
-		Name	:		C.Name,
-		Url		:		C.URL,
-		Key		:		randomString(C.LenKey),
-		Mode	:		true,
+		Mode	:		true,		// activated
 		Address	:		"127.0.0.1",
-		Email	:		C.AdminEmail,
 }
-
 
 type Database struct {
 	*sql.DB
