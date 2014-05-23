@@ -18,7 +18,8 @@ var Auth Service = Service {
 }
 
 type Database struct {
-	*sql.DB
+				*sql.DB
+	services	map[string]*Service
 }
 
 // XXX secure connection
@@ -27,7 +28,7 @@ func NewDatabase() (*Database, error) {
 		"dbname=auth user=auth host=localhost sslmode=disable")
 	if err != nil { return nil, Err(err) }
 
-	db = &Database{ tmp }
+	db = &Database{ tmp, map[string]*Service{} }
 
 	return db, db.Init()
 }
@@ -76,7 +77,7 @@ func (db *Database) createAuth() error {
 	Auth.Name = C.Name
 	Auth.Url = C.URL
 	Auth.Email =  C.AdminEmail
-	Auth.Key= randomString(C.LenKey)
+	Auth.Key = randomString(C.LenKey)
 
 	if s, err := db.GetService(1); err != nil {
 		return db.AddService(&Auth)
@@ -98,14 +99,14 @@ func (db *Database) loadServices() error {
 	for rows.Next() {
 		var s Service
 		rows.Scan(&s.Id, &s.Name, &s.Url, &s.Key, &s.Mode, &s.Address, &s.Email)
-		services[s.Key] = &s
+		db.services[s.Key] = &s
 	}
 
 	return nil
 }
 
 func (db *Database) Init() error {
-	services = map[string]*Service{}
+	db.services = map[string]*Service{}
 
 	if err := db.createTables(); err != nil { return err }
 	if err := db.createAdmin(); err != nil { return err }
@@ -204,7 +205,7 @@ func (db *Database) AddService(s *Service) error {
 
 	if err != nil {	return Err(err) }
 
-	services[s.Key] = s
+	db.services[s.Key] = s
 
 	return nil
 }
@@ -224,7 +225,11 @@ func (db *Database) GetService(id int32) (*Service, error) {
 }
 
 func (db *Database) GetService2(key string) *Service {
-	return services[key]
+	return db.services[key]
+}
+
+func (db *Database) GetServices() map[string]*Service {
+	return db.services
 }
 
 func (db *Database) SetMode(id int32, on bool) error {
@@ -239,7 +244,7 @@ func (db *Database) SetMode(id int32, on bool) error {
 		RETURNING key`, on, id).Scan(&key)
 	if err != nil { return Err(err) }
 
-	services[key].Mode = on
+	db.services[key].Mode = on
 
 	return nil
 }

@@ -122,11 +122,7 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 		http.Redirect(w, r, "/admin", http.StatusFound)
 	}
 
-	d := struct {
-		Services map[string]*Service
-	}{services}
-
-	if err := atmpl.Execute(w, &d); err != nil {
+	if err := atmpl.Execute(w, db.GetServices()); err != nil {
 		log.Println(err)
 	}
 }

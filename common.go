@@ -26,7 +26,6 @@ type Service struct {
 }
 
 var db			*Database
-var	services	map[string]*Service
 
 const (
 	Automatic = iota
