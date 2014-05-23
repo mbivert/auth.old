@@ -17,8 +17,11 @@ func sendEmail(to, subject, msg string) error {
 
 	auth := smtp.PlainAuth("", C.AuthEmail, C.AuthPasswd, C.SMTPServer)
 
-	return Err(smtp.SendMail(C.SMTPServer+":"+C.SMTPPort,
-		auth, C.AuthEmail, []string{to},[]byte(body)))
+	err := smtp.SendMail(C.SMTPServer+":"+C.SMTPPort,
+		auth, C.AuthEmail, []string{to},[]byte(body))
+	if err != nil { return Err(err) }
+
+	return nil
 }
 
 // sendEmail sends a token via email to an user.
@@ -164,11 +167,11 @@ func CheckService(key, address string) bool {
 }
 
 func SendAdmin(subject, msg string) {
-	if emails, err := db.GetAdminMail(); err != nil {
+	if admins, err := db.GetAdmins(); err != nil {
 		log.Println(err)
 		return
 	} else {
-		for _, to := range emails {
+		for _, to := range admins {
 			if err := sendEmail(to, subject, msg); err != nil {
 				log.Println(err)
 			}

@@ -155,6 +155,19 @@ func (db *Database) GetUser2(login string) (*User, error) {
 	return &u, nil
 }
 
+func (db *Database) GetUsers() (users []User) {
+	rows, _ := db.Query(`SELECT id, name, email, admin
+		FROM users`)
+
+	for rows.Next() {
+		var u User
+		rows.Scan(&u.Id, &u.Name, &u.Email, &u.Admin)
+		users = append(users, u)
+	}	
+
+	return
+}
+
 func (db *Database) GetEmail(name string) (email string) {
 	db.QueryRow(`
 		SELECT email
@@ -172,7 +185,18 @@ func (db *Database) IsAdmin(id int32) bool {
 	return err == nil
 }
 
-func (db *Database) GetAdminMail() ([]string, error) {
+// Toggle admin status for any user but Admin
+func (db *Database) ToggleAdmin(id int32) {
+	// can't change this one.
+	if id == Admin.Id { return }
+
+	db.Query(`UPDATE users
+		SET admin = NOT admin
+		WHERE id = $1`, id)
+}
+
+// return admins emails
+func (db *Database) GetAdmins() ([]string, error) {
 	var emails []string
 
 	rows, err := db.Query(`SELECT email

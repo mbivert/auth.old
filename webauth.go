@@ -118,11 +118,21 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 			ServiceMode = Manual
 		case "mode-disabled":
 			ServiceMode = Disabled
+		case "toggle-admin":
+			id, _ := strconv.Atoi(r.FormValue("id"))
+			if !db.ToggleAdmin(int32(id)) {
+				SetError(w, NoSuchErr)
+			}
 		}
 		http.Redirect(w, r, "/admin", http.StatusFound)
 	}
 
-	if err := atmpl.Execute(w, db.GetServices()); err != nil {
+	d := struct {
+		Services	map[string]*Service
+		Users		[]User
+	} { db.GetServices(), db.GetUsers() }
+
+	if err := atmpl.Execute(w, &d); err != nil {
 		log.Println(err)
 	}
 }
