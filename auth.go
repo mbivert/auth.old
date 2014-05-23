@@ -123,11 +123,61 @@ func Login(login, passwd string) (string, error) {
 }
 
 func Logout(token string) {
-	RemoveToken(token)
+	for _, t := range AllTokens(token) {
+		RemoveToken(t.Token)
+	}
 }
 
-/*func Unregister() {
-}*/
+// update user. XXX quirky, can't create a db.Update(u *User)
+// because of UNIQUE constraints, etc.
+func Update(token, name, email, passwd, npasswd string) (error, bool) {
+	c := false
+	if err := checkName(name); err != nil {
+		return err, c
+	}
+	if err := checkEmail(email); err != nil {
+		return err, c
+	}
+
+	u, _ := db.GetUser(OwnerToken(token))
+
+	if u.Name != name {
+		if err := db.UpdateName(u.Id, name); err != nil {
+			return WrongUser, c
+		}
+		c = true
+	}
+	if u.Email != email {
+		if err := db.UpdateEmail(u.Id, email); err != nil {
+			return WrongUser, c
+		}
+	}
+
+	// update password?
+	if passwd != "" && npasswd != "" {
+		h := sha512.New()
+		h.Write([]byte(passwd))
+		passwd = base64.StdEncoding.EncodeToString(h.Sum(nil))
+
+		if passwd != u.Passwd {
+			return BadPasswd, c
+		}
+
+		// hash new password
+		h.Reset()
+		h.Write([]byte(npasswd))
+		db.UpdatePassword(u.Id, base64.StdEncoding.EncodeToString(h.Sum(nil)))
+	}
+
+	return nil, c
+}
+
+func Unregister(token string) {
+	email := db.DelUser(OwnerToken(token))
+	Logout(token)
+	sendEmail(email, "[AAS] Unregistration confirmation",
+		"Your account have been deleted.")
+}
 
 func IsAdmin(token string) bool {
 	return db.IsAdmin(OwnerToken(token))

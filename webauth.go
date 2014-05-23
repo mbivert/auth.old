@@ -33,6 +33,9 @@ var (
 
 	ntmpl = template.Must(
 		template.New("navbar.html").ParseFiles("templates/navbar.html"))
+
+	s2tmpl = template.Must(
+		template.New("settings.html").ParseFiles("templates/settings.html"))
 )
 
 func index(w http.ResponseWriter, r *http.Request, token string) {
@@ -66,6 +69,11 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 		SetInfo(w, "Check your email account!")
 		http.Redirect(w, r, "/login", http.StatusFound)
 	}
+}
+
+func unregister(w http.ResponseWriter, r *http.Request, token string) {
+	Unregister(token)
+	http.Redirect(w, r, "/logout", http.StatusFound)
 }
 
 func login(w http.ResponseWriter, r *http.Request, token string) {
@@ -154,14 +162,38 @@ func sessions(w http.ResponseWriter, r *http.Request, token string) {
 	}
 }
 
+func settings(w http.ResponseWriter, r *http.Request, token string) {
+	switch r.Method {
+	case "GET":
+		u, _ := db.GetUser(OwnerToken(token))
+		if err := s2tmpl.Execute(w, u); err != nil {
+			log.Println(err)
+		}
+	case "POST":
+		name, email := r.FormValue("name"), r.FormValue("email")
+		passwd, npasswd := r.FormValue("passwd"), r.FormValue("npasswd")
+		if err, c := Update(token, name, email, passwd, npasswd); err != nil {
+			SetError(w, err)
+			if c {
+				logout(w, r, token)
+			} else {
+				http.Redirect(w, r, "/settings", http.StatusFound)
+			}
+			return
+		}
+		logout(w, r, token)
+	}
+}
+
 var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
 	"":         index,
 	"register": register,
-	//	"unregister":		unregister,
+	"unregister":		unregister,
 	"login":    login,
 	"logout":   logout,
 	"admin":    admin,
 	"sessions": sessions,
+	"settings": settings,
 }
 
 // pages which requires to be authenticated
@@ -170,6 +202,7 @@ var mustauth = map[string]bool {
 	"logout":true,
 	"admin":true,
 	"sessions":true,
+	"settings":true,
 }
 
 func auth(w http.ResponseWriter, r *http.Request) {

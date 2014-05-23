@@ -22,10 +22,8 @@ type Database struct {
 	services	map[string]*Service
 }
 
-// XXX secure connection
 func NewDatabase() (*Database, error) {
-	tmp, err := sql.Open("postgres",
-		C.DBConnect)
+	tmp, err := sql.Open("postgres", C.DBConnect)
 	if err != nil { return nil, Err(err) }
 
 	db = &Database{ tmp, map[string]*Service{} }
@@ -213,8 +211,31 @@ func (db *Database) GetAdmins() ([]string, error) {
 	return emails, nil
 }
 
-//	DelUser()
-//	UpdateUser()
+func (db *Database) DelUser(id int32) (email string) {
+	db.QueryRow(`DELETE FROM users WHERE id = $1
+		RETURNING email`, id).Scan(&email)
+	return
+}
+
+// update name and email
+func (db *Database) UpdateName(id int32, name string) error {
+	_, err := db.Query(`UPDATE users
+		SET name = $2 WHERE id = $1`, id, name)
+
+	return err
+}
+
+func (db *Database) UpdateEmail(id int32, email string) error {
+	_, err := db.Query(`UPDATE users
+		SET email = $2 WHERE id = $1`, id, email)
+
+	return err
+}
+
+func (db *Database) UpdatePassword(id int32, passwd string) {
+	db.Query(`UPDATE users SET passwd = $2 WHERE id = $1`, id, passwd)
+}
+
 //	Activate()
 
 // Services
