@@ -187,12 +187,11 @@ func (db *Database) IsAdmin(id int32) bool {
 
 // Toggle admin status for any user but Admin
 func (db *Database) ToggleAdmin(id int32) {
-	// can't change this one.
-	if id == Admin.Id { return }
-
-	db.Query(`UPDATE users
-		SET admin = NOT admin
-		WHERE id = $1`, id)
+	if id != Admin.Id {
+		db.Query(`UPDATE users
+			SET admin = NOT admin
+			WHERE id = $1`, id)
+	}
 }
 
 // return admins emails
@@ -271,5 +270,11 @@ func (db *Database) SetMode(id int32, on bool) error {
 	return nil
 }
 
-//	DelService()
+func (db *Database) DelService(key string) {
+	if key != Auth.Key {
+		db.Query("DELETE FROM services WHERE key = $1", key)
+		delete(db.services, key)
+		// XXX delete associated tokens
+	}
+}
 //	UpdateService()

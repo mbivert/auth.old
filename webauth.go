@@ -111,6 +111,8 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 			if err != nil {
 				SetError(w, err)
 			}
+		case "delete":
+			db.DelService(r.FormValue("key"))
 		case "mode-auto":
 			ServiceMode = Automatic
 			SendAdmin("[AAS] Automatic mode enabled", "Hope you're debugging.")
@@ -120,9 +122,7 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 			ServiceMode = Disabled
 		case "toggle-admin":
 			id, _ := strconv.Atoi(r.FormValue("id"))
-			if !db.ToggleAdmin(int32(id)) {
-				SetError(w, NoSuchErr)
-			}
+			db.ToggleAdmin(int32(id))
 		}
 		http.Redirect(w, r, "/admin", http.StatusFound)
 	}
