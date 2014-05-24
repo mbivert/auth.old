@@ -1,10 +1,10 @@
 package main
 
 import (
+	"./cookie"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"./cookie"
 )
 
 const (

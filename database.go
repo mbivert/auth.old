@@ -1,32 +1,34 @@
 package main
 
 import (
-	_ "github.com/lib/pq"
 	"database/sql"
+	_ "github.com/lib/pq"
 )
 
 // Remaining fields loaded from config
-var Admin User = User {
-		Id		:		1,			// by convention
-		Name	:		"admin",
-		Admin	:		true,
+var Admin User = User{
+	Id:    1, // by convention
+	Name:  "admin",
+	Admin: true,
 }
-var Auth Service = Service {
-		Id		:		1,			// by convention
-		Mode	:		true,		// activated
-		Address	:		"127.0.0.1",
+var Auth Service = Service{
+	Id:      1,    // by convention
+	Mode:    true, // activated
+	Address: "127.0.0.1",
 }
 
 type Database struct {
-				*sql.DB
-	services	map[string]*Service
+	*sql.DB
+	services map[string]*Service
 }
 
 func NewDatabase() (*Database, error) {
 	tmp, err := sql.Open("postgres", C.DBConnect)
-	if err != nil { return nil, Err(err) }
+	if err != nil {
+		return nil, Err(err)
+	}
 
-	db = &Database{ tmp, map[string]*Service{} }
+	db = &Database{tmp, map[string]*Service{}}
 
 	return db, db.Init()
 }
@@ -41,7 +43,9 @@ func (db *Database) createTables() error {
 			admin		BOOLEAN,
 			PRIMARY KEY ("id")
 		)
-	`); err != nil { return Err(err) }
+	`); err != nil {
+		return Err(err)
+	}
 
 	if _, err := db.Query(`CREATE TABLE IF NOT EXISTS
 		services(
@@ -54,7 +58,9 @@ func (db *Database) createTables() error {
 			email		TEXT,
 			PRIMARY KEY ("id")
 		)
-	`); err != nil { return Err(err) }
+	`); err != nil {
+		return Err(err)
+	}
 
 	return nil
 }
@@ -74,7 +80,7 @@ func (db *Database) createAdmin() error {
 func (db *Database) createAuth() error {
 	Auth.Name = C.Name
 	Auth.Url = C.URL
-	Auth.Email =  C.AdminEmail
+	Auth.Email = C.AdminEmail
 	Auth.Key = randomString(C.LenKey)
 
 	if s, err := db.GetService(1); err != nil {
@@ -104,9 +110,15 @@ func (db *Database) loadServices() error {
 }
 
 func (db *Database) Init() error {
-	if err := db.createTables(); err != nil { return err }
-	if err := db.createAdmin(); err != nil { return err }
-	if err := db.createAuth(); err != nil { return err }
+	if err := db.createTables(); err != nil {
+		return err
+	}
+	if err := db.createAdmin(); err != nil {
+		return err
+	}
+	if err := db.createAuth(); err != nil {
+		return err
+	}
 
 	return db.loadServices()
 }
@@ -117,7 +129,7 @@ func (db *Database) AddUser(u *User) error {
 		users(name, email, passwd, admin)
 		VALUES($1, $2, $3, $4)
 		RETURNING id`, u.Name, u.Email, u.Passwd,
-			u.Admin).Scan(&u.Id); err != nil {
+		u.Admin).Scan(&u.Id); err != nil {
 		return Err(err)
 	}
 
@@ -131,7 +143,7 @@ func (db *Database) GetUser(id int32) (*User, error) {
 		SELECT id, name, email, passwd, admin
 		FROM users
 		WHERE id = $1`, id).Scan(&u.Id, &u.Name,
-			&u.Email, &u.Passwd, &u.Admin); err != nil {
+		&u.Email, &u.Passwd, &u.Admin); err != nil {
 		return nil, Err(err)
 	}
 
@@ -146,7 +158,7 @@ func (db *Database) GetUser2(login string) (*User, error) {
 		FROM users
 		WHERE	name	= $1
 		OR		email	= $1`, login).Scan(&u.Id,
-			&u.Name, &u.Email, &u.Passwd, &u.Admin); err != nil {
+		&u.Name, &u.Email, &u.Passwd, &u.Admin); err != nil {
 		return nil, Err(err)
 	}
 
@@ -161,7 +173,7 @@ func (db *Database) GetUsers() (users []User) {
 		var u User
 		rows.Scan(&u.Id, &u.Name, &u.Email, &u.Admin)
 		users = append(users, u)
-	}	
+	}
 
 	return
 }
@@ -200,7 +212,9 @@ func (db *Database) GetAdmins() ([]string, error) {
 		FROM users
 	WHERE admin = true`)
 
-	if err != nil { return nil, Err(err) }
+	if err != nil {
+		return nil, Err(err)
+	}
 
 	for rows.Next() {
 		var email string
@@ -245,7 +259,9 @@ func (db *Database) AddService(s *Service) error {
 		VALUES($1, $2, $3, $4, $5, $6)
 		RETURNING id`, s.Name, s.Url, s.Key, s.Mode, s.Address, s.Email).Scan(&s.Id)
 
-	if err != nil {	return Err(err) }
+	if err != nil {
+		return Err(err)
+	}
 
 	db.services[s.Key] = s
 
@@ -259,9 +275,11 @@ func (db *Database) GetService(id int32) (*Service, error) {
 		SELECT id, name, url, key, mode, address, email
 		FROM services
 		WHERE id = $1`, id).Scan(&s.Id, &s.Name, &s.Url,
-			&s.Key, &s.Mode, &s.Address, &s.Email)
+		&s.Key, &s.Mode, &s.Address, &s.Email)
 
-	if err != nil { return nil, Err(err) }
+	if err != nil {
+		return nil, Err(err)
+	}
 
 	return &s, nil
 }
@@ -277,14 +295,18 @@ func (db *Database) GetServices() map[string]*Service {
 func (db *Database) SetMode(id int32, on bool) error {
 	var key string
 
-	if id == Auth.Id { return Err(NonSense) }
+	if id == Auth.Id {
+		return Err(NonSense)
+	}
 
 	err := db.QueryRow(`
 		UPDATE services
 			SET mode = $1
 			WHERE id = $2
 		RETURNING key`, on, id).Scan(&key)
-	if err != nil { return Err(err) }
+	if err != nil {
+		return Err(err)
+	}
 
 	db.services[key].Mode = on
 
@@ -299,10 +321,9 @@ func (db *Database) DelService(key string) {
 	}
 }
 
-func (db* Database) UpdateKey(key, nkey string) {
+func (db *Database) UpdateKey(key, nkey string) {
 	// if collision happens, it MUST be a sign or something, so let it be
 	db.services[nkey] = db.services[key]
 	delete(db.services, key)
 	db.Query("UPDATE services SET key = $1 WHERE key = $2", nkey, key)
 }
-

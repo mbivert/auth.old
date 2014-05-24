@@ -7,27 +7,27 @@ import (
 )
 
 type Config struct {
-	URL				string
-	Port			string
-	Name			string
-	AdminEmail		string
-	DBConnect		string
+	URL        string
+	Port       string
+	Name       string
+	AdminEmail string
+	DBConnect  string
 
-	Mode			string
-	Timeout			int64
-	LenToken		int
-	LenKey			int
+	Mode     string
+	Timeout  int64
+	LenToken int
+	LenKey   int
 
-	VerifyCaptcha	bool
+	VerifyCaptcha bool
 
-	SSL				bool
-	Certificate		string
-	PKey			string
+	SSL         bool
+	Certificate string
+	PKey        string
 
-	SMTPServer		string
-	SMTPPort		string
-	AuthEmail		string
-	AuthPasswd		string
+	SMTPServer string
+	SMTPPort   string
+	AuthEmail  string
+	AuthPasswd string
 }
 
 var C Config
@@ -43,9 +43,12 @@ func LoadConfig(filename string) {
 	}
 
 	switch C.Mode {
-	case "Disable": ServiceMode = Disabled
-	case "Automatic": ServiceMode = Automatic
-	default: ServiceMode = Manual
+	case "Disable":
+		ServiceMode = Disabled
+	case "Automatic":
+		ServiceMode = Automatic
+	default:
+		ServiceMode = Manual
 	}
 
 	// No checking:

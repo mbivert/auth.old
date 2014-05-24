@@ -20,9 +20,9 @@ import (
 type Config struct{ URL, Key string }
 
 var (
-	port  = flag.String("port", "8082", "Listening HTTP port")
-	ssl  = flag.Bool("ssl", true, "Use SSL")
-	confd = "./conf/"
+	port   = flag.String("port", "8082", "Listening HTTP port")
+	ssl    = flag.Bool("ssl", true, "Use SSL")
+	confd  = "./conf/"
 	Conf   = map[string]Config{}
 	Client = &http.Client{}
 )
@@ -40,7 +40,9 @@ func loadConfig(f string, certs *x509.CertPool) error {
 	for n, line := range bytes.Split(content, []byte("\n")) {
 		vals := bytes.Split(line, []byte("="))
 		// silently ignore bad lines.
-		if len(vals) != 2 { continue }
+		if len(vals) != 2 {
+			continue
+		}
 
 		switch string(vals[0]) {
 		case "url":

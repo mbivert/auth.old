@@ -57,8 +57,8 @@ func register(w http.ResponseWriter, r *http.Request, token string) {
 				return
 			}
 		}
-		name, email	:= r.FormValue("name"), r.FormValue("email")
-		passwd		:= r.FormValue("passwd")
+		name, email := r.FormValue("name"), r.FormValue("email")
+		passwd := r.FormValue("passwd")
 
 		if err := Register(name, email, passwd); err != nil {
 			SetError(w, err)
@@ -136,9 +136,9 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 	}
 
 	d := struct {
-		Services	map[string]*Service
-		Users		[]User
-	} { db.GetServices(), db.GetUsers() }
+		Services map[string]*Service
+		Users    []User
+	}{db.GetServices(), db.GetUsers()}
 
 	if err := atmpl.Execute(w, &d); err != nil {
 		log.Println(err)
@@ -186,23 +186,23 @@ func settings(w http.ResponseWriter, r *http.Request, token string) {
 }
 
 var authfuncs = map[string]func(http.ResponseWriter, *http.Request, string){
-	"":         index,
-	"register": register,
-	"unregister":		unregister,
-	"login":    login,
-	"logout":   logout,
-	"admin":    admin,
-	"sessions": sessions,
-	"settings": settings,
+	"":           index,
+	"register":   register,
+	"unregister": unregister,
+	"login":      login,
+	"logout":     logout,
+	"admin":      admin,
+	"sessions":   sessions,
+	"settings":   settings,
 }
 
 // pages which requires to be authenticated
-var mustauth = map[string]bool {
-	"unregister":true,
-	"logout":true,
-	"admin":true,
-	"sessions":true,
-	"settings":true,
+var mustauth = map[string]bool{
+	"unregister": true,
+	"logout":     true,
+	"admin":      true,
+	"sessions":   true,
+	"settings":   true,
 }
 
 func auth(w http.ResponseWriter, r *http.Request) {
@@ -246,17 +246,18 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" && f != "logout" {
-		msg := GetInfo(r); UnsetInfo(w)
+		msg := GetInfo(r)
+		UnsetInfo(w)
 		writeFiles(w, "templates/header.html")
-		d := struct{
+		d := struct {
 			Connected, Admin, IsError, IsInfo bool
-			Msg string
-		} {
-			Connected:	token != "",
-			Admin:    	IsAdmin(token),
-			IsError:	strings.HasPrefix(msg, "Error: "),
-			IsInfo:		msg != "",
-			Msg:		msg,
+			Msg                               string
+		}{
+			Connected: token != "",
+			Admin:     IsAdmin(token),
+			IsError:   strings.HasPrefix(msg, "Error: "),
+			IsInfo:    msg != "",
+			Msg:       msg,
 		}
 		if err := ntmpl.Execute(w, &d); err != nil {
 			log.Println(err)

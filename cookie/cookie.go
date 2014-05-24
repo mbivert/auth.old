@@ -6,19 +6,21 @@ import (
 )
 
 var (
-	hashKey = []byte(securecookie.GenerateRandomKey(32))
+	hashKey  = []byte(securecookie.GenerateRandomKey(32))
 	blockKey = []byte(securecookie.GenerateRandomKey(32))
-	s = securecookie.New(hashKey, blockKey)
+	s        = securecookie.New(hashKey, blockKey)
 )
 
 func SetCookie(w http.ResponseWriter, name, value string) error {
 	encoded, err := s.Encode(name, value)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
-	cookie := &http.Cookie {
-		Name	:	name,
-		Value	:	encoded,
-		Path	:	"/",
+	cookie := &http.Cookie{
+		Name:  name,
+		Value: encoded,
+		Path:  "/",
 	}
 	http.SetCookie(w, cookie)
 
@@ -29,18 +31,18 @@ func GetCookie(r *http.Request, name string) (string, error) {
 	var value string
 
 	cookie, err := r.Cookie(name)
-	if err == nil { 
+	if err == nil {
 		err = s.Decode(name, cookie.Value, &value)
 	}
 	return value, err
 }
 
 func UnsetCookie(w http.ResponseWriter, name string) {
-	cookie := &http.Cookie {
-		Name	:	name,
-		Value	:	"",
-		Path	:	"/",
-		MaxAge	:	-1,
+	cookie := &http.Cookie{
+		Name:   name,
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
 	}
 	http.SetCookie(w, cookie)
 }

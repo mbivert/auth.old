@@ -3,9 +3,9 @@ package main
 import (
 	"crypto/sha512"
 	"encoding/base64"
-	"strings"
-	"net/smtp"
 	"log"
+	"net/smtp"
+	"strings"
 )
 
 // sendEmail sends an email to an user.
@@ -18,8 +18,10 @@ func sendEmail(to, subject, msg string) error {
 	auth := smtp.PlainAuth("", C.AuthEmail, C.AuthPasswd, C.SMTPServer)
 
 	err := smtp.SendMail(C.SMTPServer+":"+C.SMTPPort,
-		auth, C.AuthEmail, []string{to},[]byte(body))
-	if err != nil { return Err(err) }
+		auth, C.AuthEmail, []string{to}, []byte(body))
+	if err != nil {
+		return Err(err)
+	}
 
 	return nil
 }
@@ -30,18 +32,24 @@ func sendToken(email string, token *Token) error {
 
 	err := sendEmail(email, "Token for "+s.Name,
 		"Hi there,\r\n"+
-		"Here is your token for "+s.Name+" ("+s.Url+")"+": "+token.Token)
+			"Here is your token for "+s.Name+" ("+s.Url+")"+": "+token.Token)
 
-	if err != nil { log.Println(err); return SMTPErr }
+	if err != nil {
+		log.Println(err)
+		return SMTPErr
+	}
 
 	return nil
 }
 
 func checkName(name string) error {
 	switch {
-	case name == "":							return NoNameErr
-	case len(name) >= C.LenToken:				return LongNameErr
-	case strings.Contains(name, "@ \t\n\r"):	return NameFmtErr
+	case name == "":
+		return NoNameErr
+	case len(name) >= C.LenToken:
+		return LongNameErr
+	case strings.Contains(name, "@ \t\n\r"):
+		return NameFmtErr
 	}
 
 	return nil
@@ -49,9 +57,12 @@ func checkName(name string) error {
 
 func checkEmail(email string) error {
 	switch {
-	case email == "":						return NoEmailErr
-	case len(email) >= C.LenToken:			return LongEmailErr
-	case !strings.Contains(email, "@"):		return EmailFmtErr
+	case email == "":
+		return NoEmailErr
+	case len(email) >= C.LenToken:
+		return LongEmailErr
+	case !strings.Contains(email, "@"):
+		return EmailFmtErr
 	}
 
 	return nil
@@ -80,7 +91,7 @@ func Register(name, email, passwd string) error {
 		passwd = base64.StdEncoding.EncodeToString(h.Sum(nil))
 	}
 
-	u := User{ -1, name, email, passwd, false }
+	u := User{-1, name, email, passwd, false}
 
 	if err := db.AddUser(&u); err != nil {
 		return WrongUser
@@ -188,9 +199,11 @@ func AddService(name, url, address, email string) (string, error) {
 		return "", EmptyFieldsErr
 	}
 
-	if ServiceMode == Disabled { return "ko", nil }
+	if ServiceMode == Disabled {
+		return "ko", nil
+	}
 
-	s := Service{ -1, name, url, randomString(C.LenKey), false, address, email }
+	s := Service{-1, name, url, randomString(C.LenKey), false, address, email}
 	if err := db.AddService(&s); err != nil {
 		return "", err
 	}
@@ -202,8 +215,8 @@ func AddService(name, url, address, email string) (string, error) {
 
 	// Manual
 	SendAdmin("New Service "+s.Name,
-			"Hi there,\r\n"+
-			s.Name + " ("+s.Address+", "+s.Url+") asks for landing.")
+		"Hi there,\r\n"+
+			s.Name+" ("+s.Address+", "+s.Url+") asks for landing.")
 
 	return "ok", nil
 
@@ -211,7 +224,9 @@ func AddService(name, url, address, email string) (string, error) {
 
 func CheckService(key, address string) bool {
 	s := db.GetService2(key)
-	if s == nil  { return false }
+	if s == nil {
+		return false
+	}
 
 	return s.Address == address && s.Mode
 }
