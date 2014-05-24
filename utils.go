@@ -1,11 +1,10 @@
 package main
 
 import (
-	"github.com/gorilla/securecookie"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"strings"
+	"./cookie"
 )
 
 const (
@@ -42,42 +41,19 @@ func ko(w http.ResponseWriter) {
 	w.Write([]byte("ko"))
 }
 
-var (
-	hashKey = []byte(securecookie.GenerateRandomKey(32))
-	blockKey = []byte(securecookie.GenerateRandomKey(32))
-	s = securecookie.New(hashKey, blockKey)
-)
-
 func SetToken(w http.ResponseWriter, token string) error {
-	encoded, err := s.Encode("auth-token", token)
-	if err != nil { return Err(err) }
-
-	cookie := &http.Cookie {
-		Name	:	"auth-token",
-		Value	:	encoded,
-		Path	:	"/",
+	if err := cookie.SetCookie(w, "auth-token", token); err != nil {
+		return Err(err)
 	}
-	http.SetCookie(w, cookie)
-
 	return nil
 }
 
 func UnsetToken(w http.ResponseWriter) {
-	cookie := &http.Cookie {
-		Name	:	"auth-token",
-		Value	:	"",
-		Path	:	"/",
-		MaxAge	:	-1,
-	}
-	http.SetCookie(w, cookie)
+	cookie.UnsetCookie(w, "auth-token")
 }
 
-
-func VerifyToken(r *http.Request) (token string, err error) {
-	cookie, err := r.Cookie("auth-token")
-	if err == nil { 
-		err = s.Decode("auth-token", cookie.Value, &token)
-	}
+func VerifyToken(r *http.Request) (string, error) {
+	token, err := cookie.GetCookie(r, "auth-token")
 
 	if err != nil || !CheckToken(token) {
 		return "", MouldyCookie
@@ -87,12 +63,16 @@ func VerifyToken(r *http.Request) (token string, err error) {
 }
 
 func SetInfo(w http.ResponseWriter, msg string) {
-	cookie := &http.Cookie {
-		Name	:	"auth-info",
-		Value	:	strings.Replace(msg, " ", "_", -1),
-		Path	:	"/",
-	}
-	http.SetCookie(w, cookie)
+	cookie.SetCookie(w, "auth-info", msg)
+}
+
+func GetInfo(r *http.Request) string {
+	msg, _ := cookie.GetCookie(r, "auth-info")
+	return msg
+}
+
+func UnsetInfo(w http.ResponseWriter) {
+	cookie.UnsetCookie(w, "auth-info")
 }
 
 func SetError(w http.ResponseWriter, err error) {

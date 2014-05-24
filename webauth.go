@@ -247,9 +247,16 @@ func auth(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" && f != "logout" {
 		writeFiles(w, "templates/header.html")
-		d := struct{ Connected, Admin bool }{
-			Connected: token != "",
-			Admin:     IsAdmin(token),
+		msg := GetInfo(r)
+		d := struct{
+			Connected, Admin, IsError, IsInfo bool
+			Msg string
+		} {
+			Connected:	token != "",
+			Admin:    	IsAdmin(token),
+			IsError:	strings.HasPrefix(msg, "Error: "),
+			IsInfo:		msg != "",
+			Msg:		msg,
 		}
 		if err := ntmpl.Execute(w, &d); err != nil {
 			log.Println(err)

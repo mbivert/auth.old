@@ -1,13 +1,6 @@
 # Small steps
-By a semblance of order of importance:
 
-* Clean things (variable name, eventually use packages)
-* Avoid the double-captcha at login.
-* Avoid captcha in the general case. Two-steps login is already painful.
-* /api/update is not implemented.
-* /unregister is not implemented.
-* Use SSL to communicate with PostgreSQL (not important assuming isolated communication)
-* Maybe use different storage than PostgreSQL (keep reading why it may not be that good)
+* moar cleaning.
 
 # Heavy load
 ## On Website and API

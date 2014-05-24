@@ -15,4 +15,16 @@
 	{{ end }}
 </nav>
 
-<div id="info"></div>
+{{ if .IsError }}
+	<div id="info" class="alert alert-dismissable alert-danger">
+		<button type="button" class="close"
+			data-dismiss="alert" aria-hidden="true">&times;</button>
+		{{ .Msg }}
+	</div>
+{{ else if .IsInfo }}
+	<div id="info" class="alert alert-dismissable alert-info">
+		<button type="button" class="close"
+			data-dismiss="alert" aria-hidden="true">&times;</button>
+		{{ .Msg }}
+	</div>
+{{ end }}
