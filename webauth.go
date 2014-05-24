@@ -246,8 +246,8 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" && f != "logout" {
+		msg := GetInfo(r); UnsetInfo(w)
 		writeFiles(w, "templates/header.html")
-		msg := GetInfo(r)
 		d := struct{
 			Connected, Admin, IsError, IsInfo bool
 			Msg string
