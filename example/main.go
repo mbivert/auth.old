@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -22,11 +23,13 @@ type Config struct{ URL, Key string }
 var (
 	port   = flag.String("port", "8082", "Listening HTTP port")
 	ssl    = flag.Bool("ssl", true, "Use SSL")
+	AStore = &Store{"https://localhost:8081/", "storexample"}
 	confd  = "./conf/"
 	Conf   = map[string]Config{}
 	Client = &http.Client{}
 )
 
+// Configuration
 func loadConfig(f string, certs *x509.CertPool) error {
 	name := path.Base(strings.TrimSuffix(f, ".conf"))
 
@@ -74,7 +77,6 @@ func loadConfig(f string, certs *x509.CertPool) error {
 	return nil
 }
 
-// -- Configuration
 func loadConfigs() {
 	// XXX in real life, worth keeping root certificates
 	// for auth server with real x509.
@@ -100,7 +102,7 @@ func loadConfigs() {
 	}
 }
 
-// Helper to contact API
+// Auth API
 func mkr(a, descr string) string {
 	resp, err := Client.Get(Conf[a].URL + "/api/" + descr + "&key=" + Conf[a].Key)
 	if err != nil {
@@ -119,7 +121,6 @@ func mkr(a, descr string) string {
 	return string(body)
 }
 
-// API
 func login(a, login string) string {
 	return mkr(a, "login?login="+login)
 }
@@ -133,13 +134,14 @@ type AuthData struct {
 	Name   string
 	Email  string
 	Server string
+	Value  string
 }
 
 func info(a, token string) *AuthData {
 	res := strings.Split(mkr(a, "info?token="+token), "\n")
 
 	if uid, err := strconv.ParseInt(res[0], 10, 32); err == nil {
-		return &AuthData{int32(uid), res[1], res[2], a}
+		return &AuthData{int32(uid), res[1], res[2], a, ""}
 	}
 
 	// ko
@@ -148,6 +150,50 @@ func info(a, token string) *AuthData {
 
 func logout(a, token string) {
 	mkr(a, "logout?token="+token)
+}
+
+func bridge(a, name, token string) string {
+	return mkr(a, "bridge?token="+token+"&name="+name)
+}
+
+// Store API
+type Store struct {
+	Url  string
+	Name string
+}
+
+func (s *Store) Put(token, data string) error {
+	v := url.Values{"token": {token}, "data": {data}}
+	r, err := Client.Get(s.Url + "/api/store?" + v.Encode())
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	if string(body) == "ko" {
+		return errors.New("Cannot store data")
+	}
+
+	return nil
+}
+
+func (s *Store) Get(token string) (string, error) {
+	r, err := Client.Get(s.Url + "/api/get?token=" + token)
+	if err != nil {
+		return "", err
+	}
+
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 // Cookie management
@@ -199,6 +245,7 @@ func getToken(r *http.Request) (string, AuthData, error) {
 			v["name"].(string),
 			v["email"].(string),
 			v["server"].(string),
+			"",
 		}, nil
 }
 
@@ -212,7 +259,7 @@ func unsetToken(w http.ResponseWriter) {
 }
 
 // HTTP
-const srcForm = `
+const srcLogin = `
 <!DOCTYPE html>
 <html>
 	<head>
@@ -221,7 +268,7 @@ const srcForm = `
 	<body>
 		<form action="/" method="post">
 			<select name="server">
-			{{ range $i, $v := .Conf }}
+			{{ range $i, $v := . }}
 				<option value="{{ $i }}"> {{ $i }} ({{ $v.URL }}) </option>
 			{{ end }}
 			</select>
@@ -238,7 +285,7 @@ const srcForm = `
 					</ul>
 				</ol>
 			</p>
-			<input type="submit" value="Login" />
+			<input name="login" type="submit" value="Login" />
 		</form>
 	</body>
 </html>
@@ -251,12 +298,17 @@ const srcUser = `
 	</head>
 	<body>
 		<p>Connected.</p>
-		<p>User data:</p>
+		<p>User data from auth server:</p>
 		<ul>
 			<li>UID : {{ .Uid }}</li>
 			<li>Name : {{ .Name }}</li>
 			<li>Email : {{ .Email }}</li>
 		</ul>
+		<p> User data from the store: </p>
+		<form action="/user" method="post">
+			<textarea name="data">{{ .Value }}</textarea>
+			<input type="submit" value="Store new data" />
+		</form>
 		<p>
 			When <a href="/leave">leaving</a>, the session will
 			have also disappear from your AAS.
@@ -265,57 +317,83 @@ const srcUser = `
 </html>
 `
 
-var tmplForm = template.Must(template.New("form").Parse(srcForm))
+var tmplLogin = template.Must(template.New("form").Parse(srcLogin))
 var tmplUser = template.Must(template.New("user").Parse(srcUser))
 
-func connect(w http.ResponseWriter, r *http.Request) {
+func index(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case "GET":
+		if err := tmplLogin.Execute(w, &Conf); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	case "POST":
-		l := r.FormValue("login")
-		res := login(r.FormValue("server"), l)
+		usr, srv := r.FormValue("login"), r.FormValue("server")
+
+		res := login(srv, usr)
 		if res == "ko" {
 			http.Error(w, "ko", http.StatusInternalServerError)
 		} else if res == "ok" {
-			if err := setToken(w, l, info(r.FormValue("server"), l)); err != nil {
-				log.Println(err)
-				http.Error(w, "ko", http.StatusInternalServerError)
-				return
-			}
-		}
-		// new
-		http.Redirect(w, r, "/", http.StatusFound)
-	case "GET":
-		if token, ad, err := getToken(r); err != nil || token == "ko" {
-			d := struct{ Conf map[string]Config }{Conf}
-			if err := tmplForm.Execute(w, &d); err != nil {
+			if err := setToken(w, usr, info(srv, usr)); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-		} else {
-			token = chain(ad.Server, token)
-			if token != "ko" {
-				setToken(w, token, &ad)
-				if err := tmplUser.Execute(w, &ad); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
 			} else {
-				http.Error(w, "Chain failed", http.StatusInternalServerError)
+				http.Redirect(w, r, "/user", http.StatusFound)
 			}
+		} else /* res == "new" */ {
+			http.Redirect(w, r, "/", http.StatusFound)
 		}
 	}
 }
 
+func user(w http.ResponseWriter, r *http.Request) {
+	token, ad, err := getToken(r)
+	if err != nil {
+		http.Error(w, "Not connected", http.StatusFound)
+		return
+	}
+	token = chain(ad.Server, token)
+	if token != "ko" {
+		setToken(w, token, &ad)
+	} else {
+		http.Error(w, "Bad token", http.StatusFound)
+	}
+
+	btoken := bridge(ad.Server, AStore.Name, token)
+	if btoken == "ko" {
+		http.Error(w, "cannot bridge", http.StatusInternalServerError)
+		return
+	}
+
+	if r.Method == "POST" {
+		if err := AStore.Put(btoken, r.FormValue("data")); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if ad.Value, err = AStore.Get(btoken); err != nil {
+		ad.Value = "Error while storing: " + err.Error()
+	}
+	if err := tmplUser.Execute(w, &ad); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	logout(ad.Server, btoken)
+}
+
 func leave(w http.ResponseWriter, r *http.Request) {
-	token, ad, _ := getToken(r)
-	logout(ad.Server, token)
-	unsetToken(w)
-	http.Redirect(w, r, "/", http.StatusFound)
+	if token, ad, err := getToken(r); err == nil {
+		logout(ad.Server, token)
+		unsetToken(w)
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
 }
 
 func main() {
 	flag.Parse()
 	loadConfigs()
 
-	http.HandleFunc("/", connect)
+	http.HandleFunc("/", index)
+	http.HandleFunc("/user", user)
 	http.HandleFunc("/leave", leave)
 
 	if *ssl {

@@ -4,3 +4,5 @@
 *.pem
 auth
 example/example
+storexample/storexample
+storexample/data/*
