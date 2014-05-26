@@ -288,6 +288,17 @@ func (db *Database) GetService2(key string) *Service {
 	return db.services[key]
 }
 
+func (db *Database) GetService3(name string) *Service {
+	// XXX verify if's faster that sql
+	for _, s := range db.services {
+		if s.Name == name {
+			return s
+		}
+	}
+
+	return nil
+}
+
 func (db *Database) GetServices() map[string]*Service {
 	return db.services
 }

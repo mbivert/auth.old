@@ -79,6 +79,8 @@ Chain a token (return a new token from a valid one)
 
   /api/chain key=... token=...
 
+Arguments:
+
 * key : service key
 * token : user token
 
@@ -92,7 +94,30 @@ Logout an user:
 
   /api/logout key=... token=... 
 
+Arguments:
+
 * key : service key
 * token : user token
 
-Returns nothing.
+Returns
+
+* ok
+
+## Bridge
+Make a bridge between two services. A bridge is a token
+chain associated to an user. It allows services to provides
+means to each others on behalf of an authentication server.
+
+  /api/bridge name=... token=... key=...
+
+Arguments:
+
+* name : name of the other side of the bridge
+* token : token identifying the user
+* key : key of the service who want to established the bridge
+
+Returns
+
+* a token to be send to the 'name' service
+* ko : wrong key, wrong token, unknown service
+

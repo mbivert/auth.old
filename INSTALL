@@ -149,3 +149,14 @@ for the service, and login with it on the service's page.
 You should see your id, nickname an email.
 
 You may then logout.
+
+## Store Example
+### Service registration
+In a similar way,
+
+	(earth)% curl -k --data 'name=storexample&url=http://store.awesom.eu/&address=127.0.0.1&email=admin@whatev.er' https://localhost:8080/api/discover
+
+Set this value in storexample/main.go:/Key = and build it:
+
+	(earth)% cd storexample/; go build .
+

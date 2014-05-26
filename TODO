@@ -2,6 +2,12 @@
 
 * moar cleaning.
 
+# Bridging
+
+* User permission? (is this really needed anyway)
+* Check service owning the token?
+* INSTALL file (describe storexample setup)
+
 # Heavy load
 ## On Website and API
 To be seen in production, but one-time token should generate

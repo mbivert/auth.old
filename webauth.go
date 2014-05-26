@@ -296,8 +296,8 @@ func info(w http.ResponseWriter, r *http.Request) {
 	if u, err := db.GetUser(OwnerToken(token)); err != nil {
 		ko(w)
 	} else {
-		w.Write([]byte(strconv.Itoa(int(u.Id)) + "\n" +
-			u.Name + "\n" + u.Email))
+		w.Write([]byte(strconv.Itoa(int(u.Id)) + "\n"))
+		w.Write([]byte(u.Name + "\n" + u.Email + "\n"))
 	}
 }
 
@@ -334,6 +334,22 @@ func logout2(w http.ResponseWriter, r *http.Request) {
 	ok(w)
 }
 
+func bridge(w http.ResponseWriter, r *http.Request) {
+	s := db.GetService3(r.FormValue("name"))
+	if s == nil {
+		ko(w)
+		return
+	}
+	uid := OwnerToken(r.FormValue("token"))
+	if uid == 0 {
+		ko(w)
+		return
+	}
+	// XXX check if user uid have authorize the establishment
+	// of such bridge.
+	w.Write([]byte(NewToken(uid, s.Key).Token))
+}
+
 var apifuncs = map[string]func(http.ResponseWriter, *http.Request){
 	"discover": discover,
 	"update":   update,
@@ -341,6 +357,7 @@ var apifuncs = map[string]func(http.ResponseWriter, *http.Request){
 	"login":    login2,
 	"chain":    chain,
 	"logout":   logout2,
+	"bridge":   bridge,
 }
 
 func api(w http.ResponseWriter, r *http.Request) {
