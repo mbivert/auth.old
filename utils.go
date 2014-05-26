@@ -42,37 +42,37 @@ func ko(w http.ResponseWriter) {
 }
 
 func SetToken(w http.ResponseWriter, token string) error {
-	if err := cookie.SetCookie(w, "auth-token", token); err != nil {
+	if err := cookie.Set(w, "auth-token", token); err != nil {
 		return Err(err)
 	}
 	return nil
 }
 
 func UnsetToken(w http.ResponseWriter) {
-	cookie.UnsetCookie(w, "auth-token")
+	cookie.Unset(w, "auth-token")
 }
 
 func VerifyToken(r *http.Request) (string, error) {
-	token, err := cookie.GetCookie(r, "auth-token")
+	token, err := cookie.Get(r, "auth-token")
 
-	if err != nil || !CheckToken(token) {
+	if err != nil || !CheckToken(token.(string)) {
 		return "", MouldyCookie
 	}
 
-	return token, nil
+	return token.(string), nil
 }
 
 func SetInfo(w http.ResponseWriter, msg string) {
-	cookie.SetCookie(w, "auth-info", msg)
+	cookie.Set(w, "auth-info", msg)
 }
 
 func GetInfo(r *http.Request) string {
-	msg, _ := cookie.GetCookie(r, "auth-info")
-	return msg
+	msg, _ := cookie.Get(r, "auth-info")
+	return msg.(string)
 }
 
 func UnsetInfo(w http.ResponseWriter) {
-	cookie.UnsetCookie(w, "auth-info")
+	cookie.Unset(w, "auth-info")
 }
 
 func SetError(w http.ResponseWriter, err error) {
