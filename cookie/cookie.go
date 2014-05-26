@@ -11,7 +11,7 @@ var (
 	s        = securecookie.New(hashKey, blockKey)
 )
 
-func Set(w http.ResponseWriter, name string, value interface{}) error {
+func Set(w http.ResponseWriter, name, value string) error {
 	encoded, err := s.Encode(name, value)
 	if err != nil {
 		return err
@@ -27,8 +27,8 @@ func Set(w http.ResponseWriter, name string, value interface{}) error {
 	return nil
 }
 
-func Get(r *http.Request, name string) (interface{}, error) {
-	var value interface{}
+func Get(r *http.Request, name string) (string, error) {
+	var value string
 
 	cookie, err := r.Cookie(name)
 	if err == nil {

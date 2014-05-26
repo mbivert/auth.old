@@ -55,11 +55,11 @@ func UnsetToken(w http.ResponseWriter) {
 func VerifyToken(r *http.Request) (string, error) {
 	token, err := cookie.Get(r, "auth-token")
 
-	if err != nil || !CheckToken(token.(string)) {
+	if err != nil || !CheckToken(token) {
 		return "", MouldyCookie
 	}
 
-	return token.(string), nil
+	return token, nil
 }
 
 func SetInfo(w http.ResponseWriter, msg string) {
@@ -68,7 +68,8 @@ func SetInfo(w http.ResponseWriter, msg string) {
 
 func GetInfo(r *http.Request) string {
 	msg, _ := cookie.Get(r, "auth-info")
-	return msg.(string)
+	return msg
+
 }
 
 func UnsetInfo(w http.ResponseWriter) {
