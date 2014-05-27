@@ -55,7 +55,7 @@ func UnsetToken(w http.ResponseWriter) {
 func VerifyToken(r *http.Request) (string, error) {
 	token, err := cookie.Get(r, "auth-token")
 
-	if err != nil || !CheckToken(token) {
+	if err != nil || !CheckToken(token, Auth.Key) {
 		return "", MouldyCookie
 	}
 

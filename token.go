@@ -71,12 +71,21 @@ func (m RemoveMsg) process() {
 
 type CheckMsg struct {
 	token  string
+	key    string
 	answer chan bool
 }
 
 func (m CheckMsg) process() {
-	_, ok := tokens[m.token]
-	m.answer <- ok
+	id, ok := tokens[m.token]
+	if ok {
+		for _, t := range utokens[id] {
+			if t.Token == m.token {
+				m.answer <- t.Key == m.key
+				return
+			}
+		}
+	}
+	m.answer <- false
 }
 
 type UpdateMsg struct {
@@ -164,13 +173,14 @@ func NewToken(uid int32, key string) *Token {
 	return &Token{key, <-answer}
 }
 
-func CheckToken(token string) bool {
+func CheckToken(token, key string) bool {
 	answer := make(chan bool, 1)
-	chanmsg <- CheckMsg{token, answer}
+	chanmsg <- CheckMsg{token, key, answer}
 
 	return <-answer
 }
 
+// All the following should be called after a CheckToken.
 func UpdateToken(token string) string {
 	answer := make(chan string, 1)
 	chanmsg <- UpdateMsg{token, answer}

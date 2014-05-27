@@ -305,7 +305,7 @@ func login2(w http.ResponseWriter, r *http.Request) {
 	login := r.FormValue("login")
 
 	if isToken(login) {
-		if CheckToken(login) {
+		if CheckToken(login, r.FormValue("key")) {
 			ok(w)
 		} else {
 			ko(w)
@@ -345,6 +345,7 @@ func bridge(w http.ResponseWriter, r *http.Request) {
 		ko(w)
 		return
 	}
+	
 	// XXX check if user uid have authorize the establishment
 	// of such bridge.
 	w.Write([]byte(NewToken(uid, s.Key).Token))
@@ -363,8 +364,12 @@ var apifuncs = map[string]func(http.ResponseWriter, *http.Request){
 func api(w http.ResponseWriter, r *http.Request) {
 	f := r.URL.Path[5:] // skip '/api/'
 	if f != "discover" {
-		key := r.FormValue("key")
+		key, token := r.FormValue("key"), r.FormValue("token")
 		if !CheckService(key, strings.Split(r.RemoteAddr, ":")[0]) {
+			ko(w)
+			return
+		}
+		if token != "" && !CheckToken(token, key) {
 			ko(w)
 			return
 		}
