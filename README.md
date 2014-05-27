@@ -105,10 +105,41 @@ Code to load the configuration file
 ### common.go
 Some common data structures and errors.
 
+### storexample/main.go 
+This is a sample service using a single AAS. Configured either
+in code or through the following options:
+
+	(earth)% ./storexample -help
+	Usage of ./storexample:
+	  -aas="https://localhost:8080/": AAS to use
+	  -data="./data/": Data directory
+	  -key="...": Service's key for the AAS
+	  -port="8081": Listening HTTP port
+	  -ssl=true: Use SSL
+
+It's usable through a simple API:
+
+	/api/store?token=...&data=...
+
+Check the token : `info(token)` to the AAS, and associate the
+user some data.
+
+	/api/store?token=...
+
+Check the token : `info(token)` to the AAS, and retrieve the
+data associated to the user.
+
+This server is intented to be used through the following one.
+
+Certificate/key names are hardcoded:
+
+* cert.pem, key.pem : x509 pair for the service;
+* auth-cert.pem : certificate for the AAS.
+
 ### example/main.go
-This is a sample service, configured through a conf/ directory.
-It starts by loading a set of authentication services from all
-the conf/*.conf files. Format is:
+This is a sample service, using multiple AAS configured through
+a conf/ directory. It starts by loading a set of authentication
+services from all the conf/*.conf files. Format is:
 
   variable=name
 
@@ -120,9 +151,9 @@ Variables are:
 
 A sample file can be found at example/conf/auth.conf.
 
-Remind that genkey.sh will generate/install x509 pair for both
-the AAS and example. It will also copy the certificate to example/conf/.
-
 It then starts a web server on https://localhost:8082 (-port to change port,
 SSL is default), from which a user can choose an authentication
 server and login.
+
+Once login, the server establish a bridge with storexample through
+the AAS and use it to get\/store user data.

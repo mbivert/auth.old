@@ -79,7 +79,7 @@ Ensure dependencies are installed:
 
 Compile:
 
-	(earth)% go build . && (cd example/ && go build .)
+	(earth)% go build . && (cd example/; go build .) && (cd storexample/; go build .)
 
 # Configuration
 ## Requirements
@@ -87,11 +87,15 @@ Successful build. Also, grab an email account.
 
 ## Generating x509 certificate
 Use the genkey.sh script : it will generate a x509 cert/key
-pair and install it for both auth and example. It will also
-copy the certificate to example/conf/.
+pair and install it for auth, example and storexample. It
+will also copy the certificate to example/conf/auth-cert.conf
+and to storexample/auth-cert.conf
 
 See README.md:/### example\/main.go for a description of
-example's configuration
+example's configuration.
+
+See README.md:/### storexample\/main.go for a description
+of storexample's command line options.
 
 ## AAS
 ### Configuration
@@ -146,7 +150,9 @@ Browse to the indicated URL. Try to login as 'admin'.
 Then, go to your sessions page on the AAS, grab the key
 for the service, and login with it on the service's page.
 
-You should see your id, nickname an email.
+You should see your id, nickname an email, and some user data
+if the storexample has been started, and if the user has uploaded
+some data there.
 
 You may then logout.
 
@@ -156,7 +162,12 @@ In a similar way,
 
 	(earth)% curl -k --data 'name=storexample&url=http://store.awesom.eu/&address=127.0.0.1&email=admin@whatev.er' https://localhost:8080/api/discover
 
-Set this value in storexample/main.go:/Key = and build it:
+### Configuration
+Check the command lines options, mainly `-key`.
 
-	(earth)% cd storexample/; go build .
+### Launching
+Start it with a:
 
+	(earth)% cd storexample/; ./storexample
+
+You may now use storexample's API through the previous service.
