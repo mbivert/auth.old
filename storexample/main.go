@@ -17,10 +17,10 @@ import (
 var (
 	port       = flag.String("port", "8081", "Listening HTTP port")
 	ssl        = flag.Bool("ssl", true, "Use SSL")
-	AuthServer = "https://localhost:8080/"
+	AuthServer = flag.String("aas", "https://localhost:8080/", "AAS to use")
 	AuthClient = &http.Client{}
-	Key        = "nJTkE9XjmBTM29M4riZWR7Zy9iuaB4EkzJYbqmq3DfyDSXeaU9qBv9mme6NEiaji"
-	DataDir    = "./data/"
+	Key        = flag.String("key", "nJTkE9XjmBTM29M4riZWR7Zy9iuaB4EkzJYbqmq3DfyDSXeaU9qBv9mme6NEiaji", "Service's key for the AAS")
+	DataDir    = flag.String("data", "./data/", "Data directory")
 )
 
 func ko(w http.ResponseWriter) {
@@ -33,7 +33,7 @@ func ok(w http.ResponseWriter) {
 
 // Helper to contact API
 func mkr(descr string) string {
-	r, err := AuthClient.Get(AuthServer + "/api/" + descr + "&key=" + Key)
+	r, err := AuthClient.Get(*AuthServer + "/api/" + descr + "&key=" + *Key)
 	if err != nil {
 		// XXX watch out, err may contain sensible data (key)
 		log.Println(err)
@@ -89,7 +89,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func get(w http.ResponseWriter, r *http.Request, ids string) {
-	if data, err := ioutil.ReadFile(DataDir + "/" + ids); err != nil {
+	if data, err := ioutil.ReadFile(*DataDir + "/" + ids); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)
 	} else {
@@ -99,7 +99,7 @@ func get(w http.ResponseWriter, r *http.Request, ids string) {
 
 func store(w http.ResponseWriter, r *http.Request, ids string) {
 	data := []byte(r.FormValue("data"))
-	if err := ioutil.WriteFile(DataDir+"/"+ids, data, 0600); err != nil {
+	if err := ioutil.WriteFile(*DataDir+"/"+ids, data, 0600); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)
 	} else {
@@ -117,14 +117,10 @@ func api(w http.ResponseWriter, r *http.Request) {
 
 	ids := strconv.FormatInt(int64(ad.Uid), 10)
 
-	log.Println(r.Method)
-
 	switch r.URL.Path[5:] {
 	case "store":
-		log.Println("Storing!")
 		store(w, r, ids)
 	case "get":
-		log.Println("Getting!")
 		get(w, r, ids)
 	}
 }
@@ -151,7 +147,7 @@ func main() {
 	flag.Parse()
 	loadAuthCert()
 
-	if err := os.Mkdir(DataDir, 0700); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(*DataDir, 0700); err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
 
