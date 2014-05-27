@@ -67,6 +67,10 @@ func info(token string) *AuthData {
 	return nil
 }
 
+func logout(token string) {
+	mkr("logout?token="+token)
+}
+
 // HTTP
 const indexcontent = `
 <!DOCTYPE html>
@@ -111,6 +115,7 @@ func api(w http.ResponseWriter, r *http.Request) {
 	token := r.FormValue("token")
 	ad := info(token)
 	if ad == nil {
+		log.Println("bad token: ", token)
 		ko(w)
 		return
 	}
@@ -123,6 +128,7 @@ func api(w http.ResponseWriter, r *http.Request) {
 	case "get":
 		get(w, r, ids)
 	}
+	logout(token)
 }
 
 func loadAuthCert() {

@@ -162,6 +162,10 @@ type Store struct {
 	Name string
 }
 
+func (s *Store) Bridge(aas, token string) string {
+	return bridge(aas, AStore.Name, token)
+}
+
 func (s *Store) Put(token, data string) error {
 	v := url.Values{"token": {token}, "data": {data}}
 	r, err := Client.Get(s.Url + "/api/store?" + v.Encode())
@@ -351,33 +355,27 @@ func user(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token = chain(ad.Server, token)
-	if token != "ko" {
-		setToken(w, token, &ad)
-	} else {
+	if token == "ko" {
 		http.Error(w, "Bad token", http.StatusFound)
-	}
-
-	btoken := bridge(ad.Server, AStore.Name, token)
-	if btoken == "ko" {
-		http.Error(w, "cannot bridge", http.StatusInternalServerError)
 		return
 	}
+	setToken(w, token, &ad)
 
 	if r.Method == "POST" {
+		btoken := AStore.Bridge(ad.Server, token)
 		if err := AStore.Put(btoken, r.FormValue("data")); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
+	btoken := AStore.Bridge(ad.Server, token)
 	if ad.Value, err = AStore.Get(btoken); err != nil {
 		ad.Value = "Error while storing: " + err.Error()
 	}
 	if err := tmplUser.Execute(w, &ad); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	logout(ad.Server, btoken)
 }
 
 func leave(w http.ResponseWriter, r *http.Request) {
