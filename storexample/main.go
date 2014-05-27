@@ -115,7 +115,6 @@ func api(w http.ResponseWriter, r *http.Request) {
 	token := r.FormValue("token")
 	ad := info(token)
 	if ad == nil {
-		log.Println("bad token: ", token)
 		ko(w)
 		return
 	}
