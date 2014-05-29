@@ -129,8 +129,8 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 		case "mode-disabled":
 			ServiceMode = Disabled
 		case "toggle-admin":
-			id, _ := strconv.Atoi(r.FormValue("id"))
-			db.ToggleAdmin(int32(id))
+			id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+			db.ToggleAdmin(id)
 		}
 		http.Redirect(w, r, "/admin", http.StatusFound)
 	}

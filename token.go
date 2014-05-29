@@ -11,8 +11,8 @@ type Token struct {
 	Token string
 }
 
-var utokens = map[int32][]Token{}
-var tokens = map[string]int32{}
+var utokens = map[int64][]Token{}
+var tokens = map[string]int64{}
 var timeouts = map[int64][]string{}
 
 var chanmsg chan Msg
@@ -32,7 +32,7 @@ gen:
 }
 
 type NewMsg struct {
-	uid    int32
+	uid    int64
 	key    string
 	answer chan string
 }
@@ -134,7 +134,7 @@ func (m AllMsg) process() {
 
 type OwnMsg struct {
 	token  string
-	answer chan int32
+	answer chan int64
 }
 
 func (m OwnMsg) process() {
@@ -166,7 +166,7 @@ func Timeouts() {
 }
 
 // "API"
-func NewToken(uid int32, key string) *Token {
+func NewToken(uid int64, key string) *Token {
 	answer := make(chan string, 1)
 	chanmsg <- NewMsg{uid, key, answer}
 
@@ -200,8 +200,8 @@ func AllTokens(token string) []Token {
 	return <-answer
 }
 
-func OwnerToken(token string) int32 {
-	answer := make(chan int32, 1)
+func OwnerToken(token string) int64 {
+	answer := make(chan int64, 1)
 
 	chanmsg <- OwnMsg{token, answer}
 

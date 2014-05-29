@@ -36,7 +36,7 @@ func NewDatabase() (*Database, error) {
 func (db *Database) createTables() error {
 	if _, err := db.Query(`CREATE TABLE IF NOT EXISTS
 		users(
-			id						SERIAL,
+			id						BIGSERIAL,
 			name		TEXT		UNIQUE,
 			email		TEXT		UNIQUE,
 			passwd		TEXT,
@@ -136,7 +136,7 @@ func (db *Database) AddUser(u *User) error {
 	return nil
 }
 
-func (db *Database) GetUser(id int32) (*User, error) {
+func (db *Database) GetUser(id int64) (*User, error) {
 	var u User
 
 	if err := db.QueryRow(`
@@ -186,7 +186,7 @@ func (db *Database) GetEmail(name string) (email string) {
 	return
 }
 
-func (db *Database) IsAdmin(id int32) bool {
+func (db *Database) IsAdmin(id int64) bool {
 	err := db.QueryRow(`
 		SELECT id FROM users
 		WHERE	id = $1
@@ -196,7 +196,7 @@ func (db *Database) IsAdmin(id int32) bool {
 }
 
 // Toggle admin status for any user but Admin
-func (db *Database) ToggleAdmin(id int32) {
+func (db *Database) ToggleAdmin(id int64) {
 	if id != Admin.Id {
 		db.Query(`UPDATE users
 			SET admin = NOT admin
@@ -225,28 +225,28 @@ func (db *Database) GetAdmins() ([]string, error) {
 	return emails, nil
 }
 
-func (db *Database) DelUser(id int32) (email string) {
+func (db *Database) DelUser(id int64) (email string) {
 	db.QueryRow(`DELETE FROM users WHERE id = $1
 		RETURNING email`, id).Scan(&email)
 	return
 }
 
 // update name and email
-func (db *Database) UpdateName(id int32, name string) error {
+func (db *Database) UpdateName(id int64, name string) error {
 	_, err := db.Query(`UPDATE users
 		SET name = $2 WHERE id = $1`, id, name)
 
 	return err
 }
 
-func (db *Database) UpdateEmail(id int32, email string) error {
+func (db *Database) UpdateEmail(id int64, email string) error {
 	_, err := db.Query(`UPDATE users
 		SET email = $2 WHERE id = $1`, id, email)
 
 	return err
 }
 
-func (db *Database) UpdatePassword(id int32, passwd string) {
+func (db *Database) UpdatePassword(id int64, passwd string) {
 	db.Query(`UPDATE users SET passwd = $2 WHERE id = $1`, id, passwd)
 }
 
