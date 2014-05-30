@@ -133,6 +133,7 @@ func admin(w http.ResponseWriter, r *http.Request, token string) {
 			db.ToggleAdmin(id)
 		}
 		http.Redirect(w, r, "/admin", http.StatusFound)
+		return
 	}
 
 	d := struct {

@@ -6,11 +6,12 @@
 
 * User permission? (is this really needed anyway)
 * Better bridge in *example
+* use net/rpc
 
 # Heavy load
 ## On Website and API
 To be seen in production, but one-time token should generate
-quite some traffic.
+quite some traffic. This is even more true with bridging.
 
 Multiple auth servers could be launched, communicating to
 the same database, and sharing the same token cache.
