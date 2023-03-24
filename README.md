@@ -1,3 +1,9 @@
+# Warning
+This is an old prototype, written a while ago; do *not*
+use: passwords hashes aren't compared in constant time,
+IIRC the token update code is broken and could be simplified,
+etc.
+
 # General description
 Auth is an authentication server for HTTP services.
 It works without password, using one-time tokens only.
@@ -105,7 +111,7 @@ Code to load the configuration file
 ### common.go
 Some common data structures and errors.
 
-### storexample/main.go 
+### storexample/main.go
 This is a sample service using a single AAS. Configured either
 in code or through the following options:
 
